@@ -1,5 +1,7 @@
 # OraEditor
 
+![Aperçu d’OraEditor](Promo/ora-editor-github.png)
+
 Éditeur de contenu riche, autonome et offline. Le moteur TypeScript ne dépend d’aucun backend ni framework UI.
 
 - **[Documentation HTML (installation cPanel, Webuzo, PHP, Laravel, WordPress, IA, Update Manager)](Docs/index.html)**
