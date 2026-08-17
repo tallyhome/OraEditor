@@ -1,0 +1,5 @@
+# Empêche le listage et l'accès à un config.php oublié dans le dossier public.
+Options -Indexes
+<Files "config.php">
+  Require all denied
+</Files>

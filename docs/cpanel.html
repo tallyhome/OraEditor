@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installer sur cPanel — OraEditor</title>
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body data-page="cpanel.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Hébergement</p>
+      <h1>cPanel</h1>
+      <p class="lead">
+        cPanel sert des fichiers depuis <code>public_html</code>. OraEditor s’installe comme n’importe quel
+        couple JS/CSS. PHP gère l’upload et le proxy IA. L’Update Manager automatique n’est possible
+        que si le compte a Node.js (souvent non, en mutualisé).
+      </p>
+
+      <h2>Étape 1 — Préparer les assets</h2>
+      <p>Sur votre ordinateur : <code>npm run build</code> puis <code>npm run package</code>.
+      Vous obtenez <code>dist/ora-editor/</code>.</p>
+
+      <h2>Étape 2 — Envoyer les fichiers</h2>
+      <ol class="steps">
+        <li>Connectez-vous à cPanel → <strong>Gestionnaire de fichiers</strong>.</li>
+        <li>Ouvrez <code>public_html</code> (ou le sous-dossier du site, ex. <code>public_html/app</code>).</li>
+        <li>Créez un dossier <code>ora-editor</code>.</li>
+        <li>Uploadez <code>ora-editor.js</code>, <code>ora-editor.css</code> et éventuellement le manifest.</li>
+        <li>Uploadez aussi, <em>à côté ou dans un dossier PHP</em>, les exemples :
+          <code>upload.php</code>, <code>ai-proxy.php</code> (voir <code>Docs/exemples/</code>).</li>
+      </ol>
+      <div class="danger">
+        Ne placez <strong>jamais</strong> le fichier qui contient la clé API (votre <code>config.php</code>)
+        dans un dossier listable. Idéal : un niveau <em>au-dessus</em> de <code>public_html</code>
+        (ex. <code>/home/user/ora-secrets/config.php</code>) et un <code>require</code> depuis le proxy.
+        Si l’hébergeur l’interdit, protégez le fichier par <code>.htaccess</code> (Deny from all) — ce n’est qu’un pis-aller.
+      </div>
+
+      <h2>Étape 3 — Page qui charge l’éditeur</h2>
+      <p>Créez <code>public_html/editeur.html</code> (ou une vue PHP) :</p>
+<pre><code>&lt;link rel="stylesheet" href="/ora-editor/ora-editor.css"&gt;
+&lt;div id="editor"&gt;&lt;/div&gt;
+&lt;script src="/ora-editor/ora-editor.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  new OraEditor({
+    element: "#editor",
+    toolbar: true,
+    preset: "full",
+    uploadImage: async function (file) {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/ora-editor/upload.php", { method: "POST", body });
+      return res.json();
+    },
+    aiProxyUrl: "/ora-editor/ai-proxy.php",
+  });
+&lt;/script&gt;</code></pre>
+      <p>Adaptez les chemins si le site est dans un sous-répertoire (<code>/blog/ora-editor/…</code>).</p>
+
+      <h2>Étape 4 — PHP et droits</h2>
+      <ul>
+        <li>cPanel → <strong>Sélecteur PHP</strong> : PHP 8.1+ recommandé (8.2+ pour Laravel).</li>
+        <li>Créez <code>public_html/ora-editor/uploads/</code> et donnez-lui le droit d’écriture (755 ou 775 selon l’hébergeur).</li>
+        <li>Extensions utiles : <code>fileinfo</code>, <code>curl</code> / <code>openssl</code> pour appeler OpenAI.</li>
+      </ul>
+
+      <h2>Étape 5 — HTTPS et CSP</h2>
+      <p>Activez le SSL Let’s Encrypt (cPanel → SSL/TLS Status). L’éditeur et le proxy IA doivent être en HTTPS.
+      Si vous avez une Content-Security-Policy, autorisez <code>'self'</code> pour scripts/styles et les domaines d’embed (YouTube/Vimeo) si vous utilisez les médias.</p>
+
+      <h2>Update Manager sous cPanel</h2>
+      <table>
+        <thead><tr><th>Situation</th><th>Que faire</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Mutualisé sans SSH / sans Node</td>
+            <td><strong>Mise à jour manuelle</strong> : re-uploader JS/CSS via le Gestionnaire de fichiers. Pas d’Update Manager.</td>
+          </tr>
+          <tr>
+            <td>cPanel + Terminal / SSH + Node (Setup Node.js App)</td>
+            <td>Placez <code>exemples/update.mjs</code> hors web, cron quotidien : <code>node /home/user/bin/ora-update.mjs</code></td>
+          </tr>
+          <tr>
+            <td>Vous avez Laravel sur cPanel</td>
+            <td>Job Artisan + cron <code>* * * * * php artisan schedule:run</code> — voir <a href="laravel.html">Laravel</a></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Softaculous / Installatron</h2>
+      <p>
+        Ces installeurs ne proposent pas OraEditor. Installez d’abord WordPress, Laravel ou un site PHP vide,
+        puis suivez la page correspondante. OraEditor se <em>greffe</em> sur l’application, il ne la remplace pas.
+      </p>
+
+      <div class="note">
+        Webuzo est proche de cPanel (même logique <code>public_html</code>). Voir <a href="webuzo.html">la page Webuzo</a> pour les écarts (Node.js App, Softaculous).
+      </div>
+
+      <footer class="page-foot"><a href="php.html">Détail des scripts PHP</a> · <a href="ia.html">Configurer la clé IA</a></footer>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>

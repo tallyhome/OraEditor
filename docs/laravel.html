@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laravel — OraEditor</title>
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body data-page="laravel.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Frameworks</p>
+      <h1>Laravel</h1>
+      <p class="lead">
+        Le package <code>ora/laravel</code> vit dans <code>packages/laravel</code> du monorepo.
+        Le Core TypeScript reste ignorant de Laravel : le package ne fait qu’embarquer les assets,
+        une vue Blade, un upload et un proxy IA.
+      </p>
+
+      <h2>Installation du package</h2>
+      <p>Depuis un projet Laravel 10+ (PHP 8.2+) :</p>
+<pre><code># Chemin local tant que le package n’est pas sur Packagist
+composer config repositories.ora-laravel path ../OraEditor/packages/laravel
+composer require ora/laravel
+
+php artisan vendor:publish --tag=ora-assets
+php artisan vendor:publish --tag=ora-views</code></pre>
+      <p>
+        <code>ora-assets</code> copie <code>packages/core/dist</code> vers <code>public/vendor/ora-editor</code>.
+        Pensez à <code>npm run build</code> dans OraEditor <em>avant</em> de publier.
+      </p>
+
+      <h2>Blade</h2>
+<pre><code>&lt;x-ora::editor
+    :content="$doc"
+    preset="full"
+    id="ora-editor"
+    upload-url="{{ url('/ora-editor/upload') }}"
+    ai-proxy-url="{{ url('/ora-editor/ai') }}"
+    wire-model="body"
+/&gt;</code></pre>
+      <ul>
+        <li><code>content</code> : HTML ou JSON (string / document).</li>
+        <li><code>wire-model</code> : optionnel, synchronise le JSON vers Livewire (<code>wire:ignore</code> autour de l’éditeur).</li>
+        <li>L’instance JS est exposée sur <code>window.oraEditor</code> (surchargeable via <code>jsVar</code>).</li>
+      </ul>
+
+      <h2>Routes à déclarer</h2>
+      <p>Le ServiceProvider actuel publie vues et assets ; les routes restent de votre ressort (auth, throttle) :</p>
+<pre><code>use Ora\Laravel\Http\Controllers\UploadController;
+use Ora\Laravel\Http\Controllers\AiProxyController;
+
+Route::middleware(["auth", "throttle:30,1"])-&gt;group(function () {
+    Route::post("/ora-editor/upload", UploadController::class);
+    Route::post("/ora-editor/ai", AiProxyController::class);
+});</code></pre>
+      <p>L’upload enregistre dans le disque <code>public</code>, dossier <code>ora-editor</code>, et renvoie l’URL.
+      Lancez <code>php artisan storage:link</code>.</p>
+
+      <h2>Clé OpenAI</h2>
+      <p>Dans <code>.env</code> (jamais commité, jamais envoyé au navigateur) :</p>
+<pre><code>OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_URL=https://api.openai.com/v1/chat/completions</code></pre>
+      <p>Dans <code>config/services.php</code> :</p>
+<pre><code>"openai" =&gt; [
+    "key" =&gt; env("OPENAI_API_KEY"),
+    "model" =&gt; env("OPENAI_MODEL", "gpt-4o-mini"),
+    "url" =&gt; env("OPENAI_URL", "https://api.openai.com/v1/chat/completions"),
+],</code></pre>
+      <p><code>AiProxyController</code> lit <code>config("services.openai.key")</code>. Sans clé : HTTP 503.</p>
+      <div class="note">
+        Le contrôleur transmet aujourd’hui le JSON brut d’OpenAI. En production, parsez le message du modèle
+        et renvoyez strictement <code>{ "patches": [{ "path": [0, 0], "text": "…" }] }</code>
+        — c’est le contrat du Core. Détail : <a href="ia.html">page IA</a>.
+      </div>
+
+      <h2>Sauvegarder un article</h2>
+<pre><code>// Contrôleur
+$validated = $request-&gt;validate([
+    "title" =&gt; "required|string",
+    "body" =&gt; "required|json",
+]);
+$post-&gt;body_json = $validated["body"];
+
+// Blade édition
+&lt;x-ora::editor :content="$post-&gt;body_json" /&gt;
+
+// Front public : renderer votre JSON, ou stocker aussi un HTML sanitisé
+$html = /* editor.getHTML() côté client à la sauvegarde */;</code></pre>
+
+      <h2>Update Manager + Artisan</h2>
+      <p>Créez une commande qui appelle le package Node <code>@ora-editor/update-manager</code>
+      (via <code>Symfony Process</code>) ou portez le pipeline en PHP. Cron :</p>
+<pre><code>// app/Console/Kernel.php ou routes/console.php
+Schedule::command("ora:update --channel=stable")-&gt;dailyAt("04:15");</code></pre>
+      <p>Le navigateur ne doit pas pouvoir écrire <code>public/vendor/ora-editor</code>.
+      Voir <a href="update-manager.html">Update Manager</a>.</p>
+
+      <h2>cPanel / Webuzo + Laravel</h2>
+      <ol class="steps">
+        <li>Document root du domaine = dossier <code>public/</code> de Laravel (pas la racine du projet).</li>
+        <li><code>composer install --no-dev --optimize-autoloader</code> en SSH.</li>
+        <li><code>php artisan vendor:publish --tag=ora-assets</code>.</li>
+        <li><code>.env</code> avec <code>APP_KEY</code>, <code>OPENAI_API_KEY</code>, disque public lié.</li>
+      </ol>
+
+      <footer class="page-foot"><a href="wordpress.html">Et sur WordPress ?</a></footer>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>

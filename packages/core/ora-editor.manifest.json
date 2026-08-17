@@ -1,0 +1,8 @@
+{
+  "name": "ora-editor",
+  "version": "0.1.0",
+  "channel": "stable",
+  "compatibleCore": "^0.1.0",
+  "files": ["ora-editor.js", "ora-editor.mjs", "ora-editor.css"],
+  "checksums": {}
+}

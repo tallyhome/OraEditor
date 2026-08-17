@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installer sur Webuzo — OraEditor</title>
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body data-page="webuzo.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Hébergement</p>
+      <h1>Webuzo</h1>
+      <p class="lead">
+        Webuzo (Softaculous) expose souvent File Manager, un sélecteur PHP, parfois une app Node.js,
+        et des installeurs WordPress / Laravel. OraEditor se déploie comme sur cPanel, avec un bonus
+        si Node est disponible pour l’Update Manager.
+      </p>
+
+      <h2>Déploiement classique (PHP / HTML)</h2>
+      <ol class="steps">
+        <li>End User Panel → <strong>File Manager</strong> → <code>public_html</code>.</li>
+        <li>Dossier <code>ora-editor/</code> : JS, CSS, <code>upload.php</code>, <code>ai-proxy.php</code>.</li>
+        <li>Page hôte (HTML ou PHP) avec <code>new OraEditor({…})</code> — même snippet que <a href="cpanel.html">cPanel</a>.</li>
+        <li>PHP 8.1+ dans <strong>Select PHP Version</strong>. Dossier <code>uploads/</code> inscriptible.</li>
+        <li>SSL via Let’s Encrypt dans le panneau Webuzo.</li>
+      </ol>
+
+      <h2>Application Node.js (Webuzo)</h2>
+      <p>Si le panneau propose <strong>Node.js App</strong> :</p>
+      <ul>
+        <li>Cela sert à faire tourner <em>votre</em> API (proxy IA, Update Manager), pas le Core dans Node.</li>
+        <li>Le navigateur charge toujours <code>ora-editor.js</code> en statique.</li>
+        <li>Vous pouvez y lancer le script <a href="exemples/update.mjs">exemples/update.mjs</a> en cron.</li>
+      </ul>
+      <div class="warn">
+        N’essayez pas de « servir l’éditeur » uniquement via <code>npm run dev</code> en production.
+        Vite est un outil de développement. En prod : fichiers buildés dans <code>public_html</code>.
+      </div>
+
+      <h2>WordPress / Laravel via Softaculous</h2>
+      <ol class="steps">
+        <li>Installez WordPress ou Laravel avec Softaculous.</li>
+        <li>Puis suivez <a href="wordpress.html">WordPress</a> ou <a href="laravel.html">Laravel</a>.</li>
+        <li>Les assets OraEditor vont dans le plugin WP ou dans <code>public/vendor/ora-editor</code>.</li>
+      </ol>
+
+      <h2>Cron Webuzo</h2>
+      <p>End User → <strong>Cron Jobs</strong>. Exemples :</p>
+<pre><code># Mise à jour manuelle assistée (si Node est installé)
+0 4 * * * /usr/bin/node /home/USER/bin/ora-update.mjs >> /home/USER/logs/ora-update.log 2>&amp;1
+
+# Laravel
+* * * * * /usr/bin/php /home/USER/public_html/artisan schedule:run >> /dev/null 2>&amp;1</code></pre>
+
+      <h2>Chemins fréquents</h2>
+      <table>
+        <thead><tr><th>Élément</th><th>Chemin typique</th></tr></thead>
+        <tbody>
+          <tr><td>Racine web</td><td><code>/home/USER/public_html</code></td></tr>
+          <tr><td>Assets OraEditor</td><td><code>/home/USER/public_html/ora-editor</code></td></tr>
+          <tr><td>Secrets (recommandé)</td><td><code>/home/USER/ora-secrets/config.php</code></td></tr>
+          <tr><td>Backups Update Manager</td><td><code>/home/USER/ora-backups/ora-editor</code></td></tr>
+        </tbody>
+      </table>
+
+      <footer class="page-foot"><a href="serveur-web.html">Même principe sur Apache / Nginx / IIS</a></footer>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apache, Nginx, IIS, Plesk — OraEditor</title>
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body data-page="serveur-web.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Hébergement</p>
+      <h1>Apache, Nginx, IIS et autres</h1>
+      <p class="lead">
+        OraEditor n’a pas de serveur dédié. Vous servez trois fichiers statiques et, si besoin,
+        deux routes dynamiques (<code>/upload</code>, <code>/ai</code>).
+      </p>
+
+      <h2>Arborescence recommandée</h2>
+<pre><code>/var/www/mon-site/
+  public/                 ← document root
+    index.php
+    ora-editor/
+      ora-editor.js
+      ora-editor.css
+      ora-editor.manifest.json
+      uploads/            ← images (ou mieux : un disque / S3)
+  secrets/
+    ora-config.php        ← hors document root
+  bin/
+    ora-update.mjs</code></pre>
+
+      <h2>Apache</h2>
+<pre><code>&lt;VirtualHost *:443&gt;
+  ServerName www.exemple.fr
+  DocumentRoot /var/www/mon-site/public
+
+  &lt;Directory /var/www/mon-site/public&gt;
+    AllowOverride All
+    Require all granted
+  &lt;/Directory&gt;
+
+  # Cache long sur les assets versionnés
+  &lt;Location /ora-editor&gt;
+    Header set Cache-Control "public, max-age=86400"
+  &lt;/Location&gt;
+&lt;/VirtualHost&gt;</code></pre>
+      <p>Après une mise à jour des JS/CSS, videz le cache ou suffixez <code>?v=0.1.1</code> (le manifest porte la version).</p>
+
+      <h2>Nginx</h2>
+<pre><code>server {
+  listen 443 ssl;
+  server_name www.exemple.fr;
+  root /var/www/mon-site/public;
+  index index.php index.html;
+
+  location /ora-editor/ {
+    try_files $uri =404;
+    expires 1d;
+    add_header Cache-Control "public";
+  }
+
+  location /ora-editor/upload.php {
+    include fastcgi_params;
+    fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+  }
+
+  location ~ \.php$ {
+    include fastcgi_params;
+    fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+  }
+}</code></pre>
+
+      <h2>IIS (Windows Server)</h2>
+      <ol class="steps">
+        <li>Créez un site dont la racine pointe vers votre dossier <code>public</code>.</li>
+        <li>Installez le module URL Rewrite + PHP FastCGI si vous utilisez les proxies PHP.</li>
+        <li>Ajoutez les types MIME <code>.mjs</code> → <code>text/javascript</code> si vous servez le module ES.</li>
+        <li>Droits d’écriture NTFS sur le dossier uploads pour le pool d’application.</li>
+      </ol>
+
+      <h2>Plesk / DirectAdmin</h2>
+      <p>Même logique que cPanel : document root du domaine, sous-dossier <code>ora-editor</code>, PHP 8.1+, SSL.
+      Les cron se configurent dans le panneau. Secrets hors <code>httpdocs</code>.</p>
+
+      <h2>Docker / VPS</h2>
+<pre><code># Exemple minimal : Nginx sert les assets, PHP-FPM les routes
+volumes:
+  - ./public:/usr/share/nginx/html
+  - ./secrets:/run/secrets:ro</code></pre>
+      <p>L’Update Manager tourne dans un conteneur Node ou un job CI qui monte le volume des assets.</p>
+
+      <h2>Checklist serveur</h2>
+      <table>
+        <thead><tr><th>Point</th><th>Pourquoi</th></tr></thead>
+        <tbody>
+          <tr><td>HTTPS</td><td>Caméra / clipboard / cookies de session du proxy</td></tr>
+          <tr><td>Taille upload (client_max_body_size / upload_max_filesize)</td><td>Images de l’éditeur</td></tr>
+          <tr><td>Pas de listage de répertoire</td><td>Évite d’exposer uploads et backups</td></tr>
+          <tr><td>CSP raisonnable</td><td>Scripts uniquement depuis votre origine</td></tr>
+          <tr><td>CORS seulement si le front est sur un autre domaine</td><td>Sinon inutile</td></tr>
+        </tbody>
+      </table>
+
+      <footer class="page-foot"><a href="php.html">Brancher upload + IA en PHP</a></footer>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>

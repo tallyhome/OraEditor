@@ -1,0 +1,28 @@
+{
+  "name": "ora-editor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OraEditor — écosystème d'édition de contenu autonome",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @ora-editor/playground",
+    "build": "npm run build -w @ora-editor/core",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "package": "npm run build && node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.11.2",
+    "typescript": "^5.8.3",
+    "vite": "^6.0.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

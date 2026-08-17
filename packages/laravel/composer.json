@@ -1,0 +1,22 @@
+{
+  "name": "ora/laravel",
+  "description": "Intégration Laravel / Livewire d'OraEditor (Phase 12)",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.2",
+    "illuminate/support": ">=10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Ora\\Laravel\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Ora\\Laravel\\OraEditorServiceProvider"
+      ]
+    }
+  }
+}

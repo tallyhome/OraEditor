@@ -1,0 +1,16 @@
+{
+  "name": "@ora-editor/full",
+  "version": "0.1.0",
+  "description": "Distribution Full d'OraEditor (preset du Core — Phase 6)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ora-editor/core": "0.1.0"
+  }
+}

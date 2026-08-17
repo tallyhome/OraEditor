@@ -1,0 +1,13 @@
+{
+  "name": "@ora-editor/update-manager",
+  "version": "0.1.0",
+  "description": "Update Manager hôte d'OraEditor (Phase 11) — n'est pas importé par le Core runtime",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

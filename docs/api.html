@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API hôte — OraEditor</title>
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body data-page="api.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Démarrer</p>
+      <h1>API publique (côté hôte)</h1>
+      <p class="lead">Référence courte pour brancher OraEditor dans une application. Le détail TypeScript est aussi dans <code>docs/api.md</code> du dépôt.</p>
+
+      <h2>Constructeur</h2>
+<pre><code>const editor = new OraEditor({
+  element: "#editor",          // sélecteur ou HTMLElement
+  content: "&lt;p&gt;Bonjour&lt;/p&gt;", // HTML ou OraDocument
+  editable: true,
+  toolbar: true,               // ou un HTMLElement hôte
+  preset: "full",              // "simple" | "full"
+  features: { images, tables, media, ai },
+  plugins: [],
+  uploadImage: async (file, ctx) =&gt; ({ url, alt }),
+  openMediaLibrary: async (opts) =&gt; items,
+  aiProxyUrl: "/ora-editor/ai",
+});</code></pre>
+
+      <h2>Méthodes</h2>
+      <table>
+        <thead><tr><th>Méthode</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><code>getJSON()</code> / <code>setJSON(doc)</code></td><td>Document Model (à persister)</td></tr>
+          <tr><td><code>getHTML()</code> / <code>setHTML(html)</code></td><td>HTML subset sanitisé</td></tr>
+          <tr><td><code>insertHTML(html)</code></td><td>Collage nettoyé (Word / Docs)</td></tr>
+          <tr><td><code>insertImageFile(file)</code></td><td>Upload + nœud image</td></tr>
+          <tr><td><code>openLibrary(type)</code></td><td>Médiathèque hôte</td></tr>
+          <tr><td><code>runAI(op)</code></td><td>Assistant (patches de texte)</td></tr>
+          <tr><td><code>exec(name, args?)</code></td><td>Commandes</td></tr>
+          <tr><td><code>undo()</code> / <code>redo()</code></td><td>Historique</td></tr>
+          <tr><td><code>toggleFullscreen()</code></td><td>Plein écran</td></tr>
+          <tr><td><code>ui.addToolbarButton(spec)</code></td><td>Bouton plugin</td></tr>
+          <tr><td><code>ai.register(provider)</code></td><td>Provider IA supplémentaire</td></tr>
+          <tr><td><code>on(event, handler)</code></td><td>Abonnement</td></tr>
+          <tr><td><code>destroy()</code></td><td>Nettoyage</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Commandes utiles</h2>
+      <p>Texte : <code>insertText</code>, <code>toggleMark</code>, <code>setMark</code>, <code>setBlock</code>, <code>toggleList</code>, <code>setAlign</code>, <code>indent</code>, <code>setLink</code>.</p>
+      <p>Médias : <code>insertImage</code>, <code>insertVideo</code>, <code>insertAudio</code>, <code>insertEmbed</code>, <code>setNodeAttrs</code>.</p>
+      <p>Tableaux : <code>insertTable</code>, <code>tableAddRow</code>, <code>tableAddColumn</code>, <code>tableDeleteRow</code>, <code>tableDeleteColumn</code>.</p>
+
+      <h2>Événements</h2>
+      <p>
+        <code>ready</code>, <code>change</code>, <code>focus</code>, <code>blur</code>, <code>selectionChange</code>, <code>destroy</code>,
+        <code>pluginLoaded</code>, <code>imageUploadStart</code> / <code>Success</code> / <code>Error</code>,
+        <code>aiRequestStart</code> / <code>Success</code> / <code>Error</code>.
+      </p>
+<pre><code>editor.on("change", () =&gt; {
+  hiddenInput.value = JSON.stringify(editor.getJSON());
+});</code></pre>
+
+      <h2>Plugin minimal</h2>
+<pre><code>editor.registerPlugin({
+  id: "hello",
+  name: "Hello",
+  version: "1.0.0",
+  compatibleCore: "^0.1.0",
+  setup(ed) {
+    ed.ui.addToolbarButton({
+      id: "hello",
+      title: "Hello",
+      label: "Hi",
+      onClick: () =&gt; ed.exec("insertText", { text: "Hello" }),
+    });
+    return () =&gt; {};
+  },
+});</code></pre>
+      <p>Une dépendance de plugin maximum. Pas de graphe profond.</p>
+
+      <h2>Upload — contrat</h2>
+<pre><code>{
+  url: "https://…/fichier.webp", // obligatoire, URL sûre (https / chemin site)
+  alt: "légende",
+  width: 800,
+  height: 600
+}</code></pre>
+      <p><code>ctx.source</code> vaut <code>button</code> | <code>drop</code> | <code>clipboard</code> | <code>url</code>.</p>
+
+      <footer class="page-foot"><a href="faq.html">Questions fréquentes</a></footer>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>
