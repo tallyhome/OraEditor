@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="installation.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Start</p>
+<h1>Installation</h1>
+<p class="lead">The folder <code>ready/ora-editor/</code> is <strong>already compiled</strong> (editor, upload, AI proxy, demo page). You do not build anything.</p>
+<div class="ok">Copy <code>ready/ora-editor/</code> to your web root (<code>public_html/ora-editor/</code>, <code>public/ora-editor/</code>, …) then open <code>editeur.html</code>.</div>
+<h2>What is in the kit</h2>
+<table><thead><tr><th>File</th><th>Role</th></tr></thead><tbody>
+<tr><td><code>ora-editor.js</code> + <code>.css</code></td><td>Editor (already built)</td></tr>
+<tr><td><code>editeur.html</code></td><td>Working page, toolbar + upload + AI</td></tr>
+<tr><td><code>upload.php</code></td><td>Saves images into <code>uploads/</code></td></tr>
+<tr><td><code>ai-proxy.php</code></td><td>OpenAI proxy (key in config.php)</td></tr>
+<tr><td><code>config.php</code></td><td>Settings — blocked from the web by <code>.htaccess</code></td></tr>
+<tr><td><code>uploads/</code></td><td>Image folder, already created</td></tr>
+</tbody></table>
+<h2>Where to put it</h2>
+<table><thead><tr><th>Project</th><th>Destination</th><th>URL</th></tr></thead><tbody>
+<tr><td>cPanel / Webuzo / FTP</td><td><code>public_html/ora-editor/</code></td><td><code>/ora-editor/editeur.html</code></td></tr>
+<tr><td>PHP / Apache / Nginx</td><td>document root + <code>ora-editor/</code></td><td>same</td></tr>
+<tr><td>Laravel</td><td><code>public/ora-editor/</code></td><td><code>/ora-editor/editeur.html</code></td></tr>
+<tr><td>WordPress</td><td>see <a href="wordpress.html">the plugin</a> (copy JS/CSS from the kit)</td><td>shortcode</td></tr>
+</tbody></table>
+<p>See <code>ready/LIRE-MOI.txt</code> (3 steps). Optional OpenAI: replace <code>sk-REMPLACER</code> in <code>config.php</code>. The editor works without a key (mock AI).</p>
+<h2>Developers only</h2>
+<p>Rebuild JS/CSS (not needed to install):</p>
+<pre><code>npm install
+npm run build
+npm run package</code></pre>
+<p>That updates <code>ready/ora-editor/ora-editor.js</code> and <code>.css</code>.</p>
+<footer class="page-foot"><a href="cpanel.html">cPanel</a> · <a href="webuzo.html">Webuzo</a> · <a href="serveur-web.html">web server</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="installation.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Démarrer</p>
+      <h1>Installation</h1>
+      <p class="lead">
+        Le dossier <code>ready/ora-editor/</code> est <strong>déjà compilé et branché</strong>
+        (éditeur, upload, proxy IA, page de démo). Vous n’avez rien à construire.
+      </p>
+
+      <div class="ok">
+        Copiez <code>ready/ora-editor/</code> vers la racine web de votre projet
+        (<code>public_html/ora-editor/</code>, <code>public/ora-editor/</code>, etc.)
+        puis ouvrez <code>editeur.html</code>.
+      </div>
+
+      <h2>Contenu du kit</h2>
+      <table>
+        <thead><tr><th>Fichier</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><code>ora-editor.js</code> + <code>.css</code></td><td>Éditeur (déjà buildé)</td></tr>
+          <tr><td><code>editeur.html</code></td><td>Page prête, toolbar + upload + IA</td></tr>
+          <tr><td><code>upload.php</code></td><td>Enregistre les images dans <code>uploads/</code></td></tr>
+          <tr><td><code>ai-proxy.php</code></td><td>Proxy OpenAI (clé dans config.php)</td></tr>
+          <tr><td><code>config.php</code></td><td>Réglages — bloqué au web par <code>.htaccess</code></td></tr>
+          <tr><td><code>uploads/</code></td><td>Dossier images, déjà créé</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Où le coller</h2>
+      <table>
+        <thead><tr><th>Projet</th><th>Destination</th><th>URL</th></tr></thead>
+        <tbody>
+          <tr><td>cPanel / Webuzo / FTP</td><td><code>public_html/ora-editor/</code></td><td><code>/ora-editor/editeur.html</code></td></tr>
+          <tr><td>PHP / Apache / Nginx</td><td>document root + <code>ora-editor/</code></td><td>idem</td></tr>
+          <tr><td>Laravel</td><td><code>public/ora-editor/</code> (ou package <a href="laravel.html">ora/laravel</a>)</td><td><code>/ora-editor/editeur.html</code></td></tr>
+          <tr><td>WordPress</td><td>voir <a href="wordpress.html">le plugin</a> (assets déjà dans le kit)</td><td>shortcode</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Intégrer dans votre propre page</h2>
+      <p>Les chemins relatifs marchent si JS/CSS sont dans le même dossier que la page. Sinon :</p>
+<pre><code>&lt;link rel="stylesheet" href="/ora-editor/ora-editor.css"&gt;
+&lt;div id="editor"&gt;&lt;/div&gt;
+&lt;script src="/ora-editor/ora-editor.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  new OraEditor({
+    element: "#editor",
+    toolbar: true,
+    preset: "full",
+    uploadImage: async (file) =&gt; {
+      const body = new FormData();
+      body.append("file", file);
+      return (await fetch("/ora-editor/upload.php", { method: "POST", body })).json();
+    },
+    aiProxyUrl: "/ora-editor/ai-proxy.php",
+  });
+&lt;/script&gt;</code></pre>
+
+      <h2>Pour les développeurs seulement</h2>
+      <p>Reconstruire le JS/CSS (inutile pour installer) :</p>
+<pre><code>npm install
+npm run build
+npm run package</code></pre>
+      <p>Cela met à jour <code>ready/ora-editor/ora-editor.js</code> et <code>.css</code>.</p>
+
+      <footer class="page-foot"><a href="cpanel.html">cPanel</a> · <a href="webuzo.html">Webuzo</a> · <a href="serveur-web.html">serveur web</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

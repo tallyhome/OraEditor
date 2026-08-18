@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAQ — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="faq.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Exploitation</p>
+      <h1>FAQ</h1>
+
+      <h2>Y a-t-il un dashboard / panel admin ?</h2>
+      <p><strong>Non.</strong> OraEditor n’est pas un CMS. Pas de stats, pas de licences, pas d’écran de mise à jour intégré.</p>
+      <ul>
+        <li>Playground dev : <code>npm run dev</code> (port 5173).</li>
+        <li>Panneau IA : sous l’éditeur, preset Full.</li>
+        <li>Update Manager : à brancher dans <em>votre</em> back-office.</li>
+      </ul>
+
+      <h2>Où est le Update Manager ?</h2>
+      <p><code>packages/update-manager</code>. Documentation : <a href="update-manager.html">cette page</a>. Ce n’est pas visible dans le navigateur.</p>
+
+      <h2>Comment accéder aux différentes IA ?</h2>
+      <p>Preset <code>full</code> + <code>aiProxyUrl</code> pour OpenAI/custom. Mock déjà là. OraAI grisé. Ollama via <code>createOllamaEngine</code>. Détail : <a href="ia.html">clés IA</a>.</p>
+
+      <h2>La couleur du texte / les colonnes de tableau</h2>
+      <p>Correctifs dans le Core 0.1 : la couleur s’applique au mot ou à la sélection ; une colonne ajoutée recopie l’en-tête (fond de la 1<sup>re</sup> ligne). Rebuildez et renvoyez les assets si votre serveur a encore un vieux JS.</p>
+
+      <h2>Les images disparaissent au rechargement</h2>
+      <p>Vous êtes encore en fallback <code>blob:</code>. Branchez <code>uploadImage</code> vers PHP / Laravel / WP-REST.</p>
+
+      <h2>L’IA répond « réponse invalide »</h2>
+      <p>Le proxy renvoie le JSON OpenAI brut. Reformatez en <code>{ patches: [{ path, text }] }</code>.</p>
+
+      <h2>Peut-on l’utiliser hors ligne ?</h2>
+      <p>Oui pour l’édition (JS + CSS locaux, mock IA). Non pour OpenAI. Ollama possible en local. Uploads : besoin d’un disque ou d’un mode brouillon.</p>
+
+      <h2>React / Vue / Angular ?</h2>
+      <p>Pas de wrapper officiel. Montez l’éditeur dans un <code>ref</code> / <code>useEffect</code>, détruisez à l’unmount (<code>editor.destroy()</code>). Ne pas ré-instancier à chaque render.</p>
+
+      <h2>WordPress.org / Composer Packagist ?</h2>
+      <p>Pas encore publiés. Installation par copie de fichiers ou <code>composer path</code> vers <code>packages/laravel</code>.</p>
+
+      <h2>Licence et sécurité</h2>
+      <p>Le HTML collé est sanitisé (allowlist). Les URLs d’images/embeds sont filtrées (HTTPS, YouTube/Vimeo). Ne faites pas confiance au HTML brut d’un utilisateur pour un <code>echo</code> sans kses / escaping.</p>
+
+      <h2>Ouvrir cette doc</h2>
+      <p>Double-cliquez <code>Docs/index.html</code> ou servez le dossier <code>Docs/</code> avec n’importe quel serveur statique. Aucune base de données n’est requise.</p>
+
+      <footer class="page-foot">Retour à l’<a href="index.html">accueil</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apache, Nginx, IIS — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="de" data-page="serveur-web.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Hosting</p><h1>Apache, Nginx, IIS</h1>
+<pre><code>/var/www/site/
+  public/
+    ora-editor/
+      ora-editor.js
+      ora-editor.css
+      ora-editor.manifest.json
+      uploads/
+  secrets/
+    ora-config.php
+  bin/
+    ora-update.mjs</code></pre>
+<table><thead><tr><th>HTTPS</th><th>upload</th><th>CSP</th><th>CORS</th></tr></thead>
+<tbody><tr><td>oui</td><td>client_max_body_size</td><td>'self'</td><td>si besoin</td></tr></tbody></table>
+<footer class="page-foot"><a href="php.html">PHP</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

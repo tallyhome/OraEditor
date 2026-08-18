@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="index.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Host documentation</p>
+<h1>Install and run OraEditor</h1>
+<p class="lead">The folder <code>ready/ora-editor/</code> is <strong>already built</strong>: JS, CSS, demo page, upload and AI proxy. Copy it into your project — no Node, no npm.</p>
+<div class="cards">
+  <a class="card" href="installation.html"><h3>1. Ready kit</h3><p>Copy <code>ready/ora-editor/</code> — no npm.</p></a>
+  <a class="card" href="cpanel.html"><h3>2. Hosting</h3><p>cPanel, Webuzo, Apache, Nginx, IIS, Plesk.</p></a>
+  <a class="card" href="php.html"><h3>3. PHP / Laravel / WP</h3><p>Same kit, or the Laravel / WordPress extras.</p></a>
+  <a class="card" href="ia.html"><h3>4. AI keys</h3><p>Optional: edit config.php. Mock works without a key.</p></a>
+  <a class="card" href="update-manager.html"><h3>5. Update Manager</h3><p>Or just re-upload JS/CSS from <code>ready/</code>.</p></a>
+</div>
+<h2>What OraEditor is not</h2>
+<ul>
+  <li>It is <strong>not</strong> a CMS. No accounts, no admin dashboard ships with it.</li>
+  <li>It is <strong>not</strong> an official WordPress plugin (you can still embed it — see <a href="wordpress.html">WordPress</a>).</li>
+  <li>The Update Manager is <strong>not</strong> a button in the editor. It is a host tool (Node / Artisan / cron).</li>
+  <li>OpenAI / Anthropic keys must <strong>never</strong> live in public JS.</li>
+</ul>
+<h2>Requirements</h2>
+<table><thead><tr><th>To…</th><th>You need</th></tr></thead><tbody>
+<tr><td>Build the files</td><td>Node.js 20+ and npm, once, on a build machine</td></tr>
+<tr><td>Show the editor</td><td>A web server that serves HTML + JS + CSS (HTTPS recommended)</td></tr>
+<tr><td>Upload images</td><td>A host route (PHP, Laravel, WP-REST…) that writes to disk</td></tr>
+<tr><td>Use AI in production</td><td>A server proxy + a key in a <code>.env</code> outside the web root</td></tr>
+<tr><td>Auto-update</td><td>Node (or an Artisan job) with write access to the assets folder</td></tr>
+</tbody></table>
+<div class="ok">The developer playground is <code>npm run dev</code> (port 5173). This documentation is about <strong>deploying into a real project</strong>.</div>
+<h2>Architecture in one sentence</h2>
+<p>The <strong>JSON Document Model</strong> is the source of truth. The DOM is only a view. The host stores that JSON (or sanitized HTML) and serves <code>ora-editor.js</code> + <code>ora-editor.css</code>.</p>
+<footer class="page-foot">OraEditor 0.1 — open this folder in a browser.</footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

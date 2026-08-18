@@ -1,6 +1,6 @@
 # Installer OraEditor dans un projet
 
-> Guide HTML complet (cPanel, Webuzo, PHP, Laravel, WordPress, IA, Update Manager) : ouvrez [`Docs/index.html`](../Docs/index.html).
+> Guide HTML (cPanel, Webuzo, PHP, Laravel, WordPress, IA, Update Manager) : [`Docs/index.html`](index.html) — **FR, EN, PO/PT, ES, IT, RU, DE**.
 
 Le moteur est un **fichier JS + CSS**. Il ne dépend pas de Laravel, React, WordPress, etc. L’hôte fournit seulement : un `<div>`, éventuellement un upload, un proxy IA, une médiathèque.
 

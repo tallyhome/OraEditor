@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apache, Nginx, IIS — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="serveur-web.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Hosting</p>
+<h1>Apache, Nginx, IIS and others</h1>
+<p class="lead">Copy <code>ready/ora-editor/</code> into the document root. Already built: JS, CSS, <code>editeur.html</code>, upload, AI proxy.</p>
+<h2>Recommended tree</h2>
+<pre><code>/var/www/site/
+  public/
+    ora-editor/
+      ora-editor.js
+      ora-editor.css
+      ora-editor.manifest.json
+      uploads/
+  secrets/
+    ora-config.php
+  bin/
+    ora-update.mjs</code></pre>
+<h2>Checklist</h2>
+<table><thead><tr><th>Item</th><th>Why</th></tr></thead><tbody>
+<tr><td>HTTPS</td><td>Clipboard, session cookies for the proxy</td></tr>
+<tr><td>Upload size limits</td><td>Editor images</td></tr>
+<tr><td>No directory listing</td><td>Do not expose uploads or backups</td></tr>
+<tr><td>Reasonable CSP</td><td>Scripts only from your origin</td></tr>
+<tr><td>CORS only if the front is on another domain</td><td>Otherwise unused</td></tr>
+</tbody></table>
+<p>After updating JS/CSS, hard-refresh or suffix <code>?v=0.1.1</code>.</p>
+<footer class="page-foot"><a href="php.html">Wire upload + AI in PHP</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laravel — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="laravel.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Frameworks</p>
+<h1>Laravel</h1>
+<p class="lead">Simplest path: copy <code>ready/ora-editor/</code> to <code>public/ora-editor/</code>. The <code>ora/laravel</code> package is optional (Blade, controllers).</p>
+<h2>Install</h2>
+<pre><code>composer config repositories.ora-laravel path ../OraEditor/packages/laravel
+composer require ora/laravel
+php artisan vendor:publish --tag=ora-assets
+php artisan vendor:publish --tag=ora-views</code></pre>
+<h2>Blade</h2>
+<pre><code>&lt;x-ora::editor :content="$doc" preset="full" wire-model="body" /&gt;</code></pre>
+<h2>OpenAI key</h2>
+<p>In <code>.env</code> (never committed, never sent to the browser): <code>OPENAI_API_KEY=sk-...</code></p>
+<div class="note">In production, parse the model message and return strictly <code>{ "patches": [{ "path", "text" }] }</code>. See <a href="ia.html">AI</a>.</div>
+<p>The browser must not write <code>public/vendor/ora-editor</code>. See <a href="update-manager.html">Update Manager</a>.</p>
+<footer class="page-foot"><a href="wordpress.html">And on WordPress?</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

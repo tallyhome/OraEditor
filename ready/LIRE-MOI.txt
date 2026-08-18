@@ -1,0 +1,15 @@
+OraEditor — kit prêt à installer
+================================
+
+1. Envoyez TOUT le dossier "ora-editor" dans public_html
+   (cPanel / Webuzo / FTP). Résultat : public_html/ora-editor/
+
+2. Ouvrez : https://votre-site.fr/ora-editor/editeur.html
+
+3. (Optionnel) IA : éditez ora-editor/config.php
+   et remplacez sk-REMPLACER par votre clé OpenAI.
+   Ce fichier est bloqué par .htaccess (pas lisible depuis le web).
+
+Rien à compiler. Pas besoin de Node, ni de npm, ni de "npm run build".
+
+Dossier uploads/ : déjà créé. S'il refuse les images, droits 755 ou 775.

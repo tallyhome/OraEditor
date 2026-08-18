@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHP — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="php.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Frameworks</p>
+      <h1>Intégration PHP (sans framework)</h1>
+      <p class="lead">
+        Utilisez d’abord le kit <code>ready/ora-editor/</code> (déjà compilé : page, upload, proxy).
+        Les sources commentées restent dans <code>Docs/exemples/</code> si vous voulez les lire.
+      </p>
+
+      <h2>Fichiers</h2>
+      <table>
+        <thead><tr><th>Fichier</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../exemples/page.html">exemples/page.html</a></td><td>Page démo + initialisation</td></tr>
+          <tr><td><a href="../exemples/upload.php">exemples/upload.php</a></td><td>Reçoit <code>file</code>, écrit dans <code>uploads/</code>, renvoie <code>{ url, alt }</code></td></tr>
+          <tr><td><a href="../exemples/ai-proxy.php">exemples/ai-proxy.php</a></td><td>Reçoit <code>{ op, scope, fragments }</code>, appelle OpenAI, renvoie <code>{ patches }</code></td></tr>
+          <tr><td><a href="../exemples/config.sample.php">exemples/config.sample.php</a></td><td>Modèle de secrets — à copier hors web en <code>config.php</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2>Upload</h2>
+      <p>L’éditeur envoie un <code>FormData</code> avec le champ <code>file</code>. Réponse JSON attendue :</p>
+<pre><code>{ "url": "https://exemple.fr/ora-editor/uploads/abc.webp", "alt": "nom-original.png" }</code></pre>
+      <p>Le script d’exemple :</p>
+      <ul>
+        <li>refuse tout ce qui n’est pas une image (JPEG, PNG, GIF, WebP) ;</li>
+        <li>renomme le fichier (évite les collisions et les <code>.php.jpg</code>) ;</li>
+        <li>limite la taille (par défaut 8&nbsp;Mo).</li>
+      </ul>
+      <div class="warn">
+        Ajoutez votre propre contrôle d’authentification (session, token). Tel quel, n’importe qui qui connaît l’URL peut uploader.
+      </div>
+
+      <h2>Sauvegarder le contenu</h2>
+      <p>Au submit du formulaire, stockez de préférence le <strong>JSON</strong> :</p>
+<pre><code>$doc = json_decode($_POST["body_json"], true);
+// valider / enregistrer en base
+// réaffichage : echo json_encode($doc) dans options.content</code></pre>
+      <p><code>getHTML()</code> est un export sanitisé (allowlist). Le JSON reste la source de vérité (tableaux, attrs image, etc.).</p>
+
+      <h2>Proxy IA</h2>
+      <p>Voir le contrat exact sur <a href="ia.html">la page IA</a>. En PHP :</p>
+      <ol class="steps">
+        <li>Copiez <code>config.sample.php</code> → <code>/home/user/ora-secrets/config.php</code>.</li>
+        <li>Mettez <code>ORA_OPENAI_KEY</code>.</li>
+        <li>Pointez <code>aiProxyUrl: "/ora-editor/ai-proxy.php"</code>.</li>
+      </ol>
+
+      <h2>Sessions et CSRF</h2>
+      <p>Si votre site a déjà une session :</p>
+<pre><code>uploadImage: async (file) =&gt; {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("csrf", window.CSRF);
+  const res = await fetch("/ora-editor/upload.php", { method: "POST", body, credentials: "same-origin" });
+  return res.json();
+}</code></pre>
+
+      <footer class="page-foot">Projet Laravel ? Utilisez le package dédié — <a href="laravel.html">page suivante</a>.</footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
+

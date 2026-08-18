@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WordPress — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="wordpress.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Frameworks</p>
+<h1>WordPress</h1>
+<p class="lead">Yes, you can install it on WordPress. There is <strong>no official plugin</strong> on wordpress.org yet. Ship the Core as assets of a small plugin: shortcode, settings (AI key), REST routes for upload and proxy.</p>
+<div class="warn">OraEditor does not replace Gutenberg in one click. Realistic uses: <strong>front form / page</strong> (shortcode) or a <strong>metabox</strong> (JSON in post meta).</div>
+<h2>Manual install</h2>
+<ol class="steps">
+  <li>Create <code>wp-content/plugins/ora-editor/</code>.</li>
+  <li>Copy <a href="../exemples/wordpress-plugin/ora-editor.php">ora-editor.php</a>.</li>
+  <li>Copy <code>ora-editor.js</code> + <code>.css</code> from <code>ready/ora-editor/</code> into <code>assets/</code> (already built, no npm).</li>
+  <li>Activate the plugin. Settings → OraEditor: paste the OpenAI key (never printed in public HTML).</li>
+</ol>
+<h2>Shortcode</h2>
+<pre><code>[ora_editor id="my-editor" preset="full"]</code></pre>
+<footer class="page-foot">Skeleton plugin: <code>Docs/exemples/wordpress-plugin/ora-editor.php</code></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

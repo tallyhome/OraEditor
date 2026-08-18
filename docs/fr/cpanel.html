@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installer sur cPanel — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="cpanel.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Hébergement</p>
+      <h1>cPanel</h1>
+      <p class="lead">
+        Tout est déjà compilé dans <code>ready/ora-editor/</code>.
+        Pas de Node, pas de <code>npm run build</code> : on envoie le dossier et on ouvre la page.
+      </p>
+
+      <div class="ok">
+        Le kit contient déjà : <code>ora-editor.js</code>, <code>ora-editor.css</code>,
+        <code>editeur.html</code>, <code>upload.php</code>, <code>ai-proxy.php</code>,
+        <code>config.php</code>, dossier <code>uploads/</code> et <code>.htaccess</code>.
+      </div>
+
+      <h2>3 étapes</h2>
+      <ol class="steps">
+        <li>cPanel → <strong>Gestionnaire de fichiers</strong> → <code>public_html</code>.</li>
+        <li>Envoyez le dossier <code>ready/ora-editor/</code> tel quel (glisser-déposer le dossier, ou ZIP puis Extraire).</li>
+        <li>Ouvrez <code>https://votre-site.fr/ora-editor/editeur.html</code>.</li>
+      </ol>
+
+      <h2>IA (optionnel)</h2>
+      <p>L’éditeur marche sans clé (assistant mock). Pour OpenAI : éditez <code>ora-editor/config.php</code>, remplacez <code>sk-REMPLACER</code>. Ce fichier n’est pas lisible depuis le navigateur (<code>.htaccess</code>).</p>
+
+      <h2>Si les images ne s’enregistrent pas</h2>
+      <p>Clic droit sur <code>ora-editor/uploads</code> → Permissions → <code>755</code> ou <code>775</code>. PHP 8.1+ dans le sélecteur cPanel.</p>
+
+      <h2>Mettre à jour plus tard</h2>
+      <p>Sur un mutualisé : renvoyez simplement les nouveaux <code>ora-editor.js</code> et <code>.css</code> du dossier <code>ready/</code> (après une nouvelle version du projet). Pas besoin de Node sur le serveur.</p>
+
+      <div class="note">
+        Webuzo, FTP, Plesk : même geste — copier <code>ready/ora-editor/</code> dans la racine web.
+        Voir <a href="webuzo.html">Webuzo</a> et <a href="serveur-web.html">Apache / Nginx</a>.
+      </div>
+
+      <footer class="page-foot"><a href="installation.html">Kit prêt</a> · <a href="ia.html">Clé IA</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

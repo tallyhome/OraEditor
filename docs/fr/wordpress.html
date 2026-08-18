@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WordPress — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="wordpress.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Frameworks</p>
+      <h1>WordPress</h1>
+      <p class="lead">
+        Oui, on peut l’installer sur WordPress. Il n’existe <strong>pas encore de plugin officiel</strong>
+        sur wordpress.org. On embarque le Core comme assets d’un petit plugin : shortcode, réglages (clé IA),
+        routes REST pour l’upload et le proxy.
+      </p>
+
+      <div class="warn">
+        OraEditor ne remplace pas Gutenberg « en un clic ». Deux usages réalistes :
+        <strong>formulaire / page front</strong> (shortcode), ou <strong>metabox</strong> sur un type de contenu
+        (vous stockez le JSON dans un post meta). Remplacer entièrement l’éditeur de blocs est un projet à part.
+      </div>
+
+      <h2>Installation manuelle</h2>
+      <ol class="steps">
+        <li>Créez <code>wp-content/plugins/ora-editor/</code>.</li>
+        <li>Copiez-y <a href="../exemples/wordpress-plugin/ora-editor.php">exemples/wordpress-plugin/ora-editor.php</a>.</li>
+        <li>Créez <code>wp-content/plugins/ora-editor/assets/</code> et copiez <code>ora-editor.js</code> + <code>ora-editor.css</code> depuis <code>ready/ora-editor/</code> (déjà compilés, pas de npm).</li>
+        <li>Extensions → Plugins installés → activez <strong>OraEditor</strong>.</li>
+        <li>Réglages → OraEditor : collez la clé OpenAI (stockée en option WordPress, jamais imprimée dans le HTML public).</li>
+      </ol>
+
+      <h2>Shortcode (front ou page)</h2>
+<pre><code>[ora_editor id="mon-editeur" preset="full"]</code></pre>
+      <p>Dans un thème ou un formulaire de contact maison, le shortcode injecte le <code>&lt;div&gt;</code>,
+      enqueue les assets, et initialise <code>new OraEditor</code> avec :</p>
+      <ul>
+        <li><code>uploadImage</code> → <code>POST /wp-json/ora-editor/v1/upload</code> (nonce + <code>upload_files</code>)</li>
+        <li><code>aiProxyUrl</code> → <code>/wp-json/ora-editor/v1/ai</code></li>
+      </ul>
+
+      <h2>Metabox (édition d’un article)</h2>
+      <p>Le plugin d’exemple ajoute une metabox « Contenu OraEditor » qui :</p>
+      <ol class="steps">
+        <li>charge le JSON depuis <code>_ora_document</code> ;</li>
+        <li>au save_post, lit <code>$_POST["ora_document"]</code> (JSON) ;</li>
+        <li>peut aussi stocker un HTML sanitisé dans <code>_ora_html</code> pour le front.</li>
+      </ol>
+<pre><code>// front-page / single
+$html = get_post_meta(get_the_ID(), "_ora_html", true);
+echo wp_kses_post($html);</code></pre>
+      <div class="note">
+        Le HTML d’OraEditor est déjà sanitisé côté Core (allowlist).
+        <code>wp_kses_post</code> reste une seconde barrière ; il peut retirer des attrs (tableaux, embeds).
+        Pour un rendu fidèle, préférez un renderer PHP du JSON, ou un kses étendu.
+      </div>
+
+      <h2>Droits</h2>
+      <table>
+        <thead><tr><th>Capacité WP</th><th>Usage</th></tr></thead>
+        <tbody>
+          <tr><td><code>upload_files</code></td><td>Route upload (auteurs, éditeurs, admins)</td></tr>
+          <tr><td><code>edit_posts</code></td><td>Sauvegarder le JSON d’un post</td></tr>
+          <tr><td><code>manage_options</code></td><td>Page de réglage de la clé IA</td></tr>
+        </tbody>
+      </table>
+
+      <h2>cPanel / Webuzo</h2>
+      <p>Installez WordPress via Softaculous, puis uploadez le dossier plugin (ZIP ou File Manager).
+      Même règles : HTTPS, PHP 8.1+, dossier uploads WP déjà inscriptible.</p>
+
+      <h2>Ce qui n’est pas fourni</h2>
+      <ul>
+        <li>Bloc Gutenberg officiel (on peut envelopper le shortcode dans un bloc HTML personnalisé).</li>
+        <li>Remplacement de TinyMCE / Classic Editor pour tous les posts.</li>
+        <li>Mises à jour via le dépôt wordpress.org — utilisez l’<a href="update-manager.html">Update Manager</a> sur le dossier <code>assets/</code> du plugin, ou un FTP manuel.</li>
+      </ul>
+
+      <footer class="page-foot">Plugin squelette : <code>Docs/exemples/wordpress-plugin/ora-editor.php</code></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
+

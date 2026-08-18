@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAQ — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="faq.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Operations</p>
+<h1>FAQ</h1>
+<h2>Is there an admin dashboard?</h2>
+<p><strong>No.</strong> OraEditor is not a CMS. Playground: <code>npm run dev</code>. AI panel: under the Full editor. Update Manager: wire it into <em>your</em> back office.</p>
+<h2>Where is the Update Manager?</h2>
+<p><code>packages/update-manager</code> — not visible in the browser. See <a href="update-manager.html">this page</a>.</p>
+<h2>How do I enable the AIs?</h2>
+<p>Preset <code>full</code> + <code>aiProxyUrl</code>. Mock is already there. OraAI is greyed out. Ollama via <code>createOllamaEngine</code>. Details: <a href="ia.html">AI keys</a>.</p>
+<h2>Images disappear on reload</h2>
+<p>You are still on the <code>blob:</code> fallback. Wire <code>uploadImage</code>.</p>
+<h2>AI says “invalid response”</h2>
+<p>Reformat the proxy output to <code>{ patches: [{ path, text }] }</code>.</p>
+<h2>Offline?</h2>
+<p>Yes for editing (local JS/CSS, mock AI). No for OpenAI. Ollama can run locally.</p>
+<footer class="page-foot"><a href="index.html">Home</a> · <a href="../index.html">Languages</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

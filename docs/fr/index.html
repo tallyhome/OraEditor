@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OraEditor — Documentation d’intégration</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="index.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Documentation hôte</p>
+      <h1>Installer et exploiter OraEditor</h1>
+      <p class="lead">
+        OraEditor est un éditeur riche autonome. Le dossier <code>ready/ora-editor/</code>
+        est <strong>déjà prêt</strong> : JS, CSS, page, upload et proxy IA.
+        Copiez-le dans votre projet — rien à compiler.
+      </p>
+
+      <div class="cards">
+        <a class="card" href="installation.html">
+          <h3>1. Kit prêt</h3>
+          <p>Copier <code>ready/ora-editor/</code> — pas de npm.</p>
+        </a>
+        <a class="card" href="cpanel.html">
+          <h3>2. Hébergement</h3>
+          <p>cPanel, Webuzo, Apache, Nginx, IIS, Plesk.</p>
+        </a>
+        <a class="card" href="php.html">
+          <h3>3. PHP / Laravel / WP</h3>
+          <p>Intégration concrète, upload et proxy IA.</p>
+        </a>
+        <a class="card" href="ia.html">
+          <h3>4. Clés IA</h3>
+          <p>OpenAI, Ollama, mock. Jamais de secret dans le navigateur.</p>
+        </a>
+        <a class="card" href="update-manager.html">
+          <h3>5. Update Manager</h3>
+          <p>Pipeline CHECK → INSTALL → HEALTHCHECK, côté serveur.</p>
+        </a>
+      </div>
+
+      <h2>Ce que OraEditor n’est pas</h2>
+      <ul>
+        <li>Ce n’est <strong>pas</strong> un CMS. Pas de comptes, pas de dashboard admin livré.</li>
+        <li>Ce n’est <strong>pas</strong> un plugin WordPress officiel (on peut quand même l’embarquer, voir <a href="wordpress.html">WordPress</a>).</li>
+        <li>L’Update Manager n’est <strong>pas</strong> un bouton dans l’éditeur. C’est un outil hôte (Node / Artisan / cron).</li>
+        <li>Les clés OpenAI / Anthropic / etc. ne vont <strong>jamais</strong> dans le JS public.</li>
+      </ul>
+
+      <h2>Prérequis</h2>
+      <table>
+        <thead>
+          <tr><th>Pour…</th><th>Il vous faut</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Construire les fichiers</td><td>Node.js 20+ et npm, une fois, sur une machine de build</td></tr>
+          <tr><td>Afficher l’éditeur</td><td>Un serveur web qui sert du HTML + JS + CSS (HTTPS recommandé)</td></tr>
+          <tr><td>Uploader des images</td><td>Une route hôte (PHP, Laravel, WP-REST…) qui écrit sur le disque</td></tr>
+          <tr><td>Utiliser l’IA en production</td><td>Un proxy serveur + une clé dans un <code>.env</code> hors web</td></tr>
+          <tr><td>Mettre à jour automatiquement</td><td>Node (ou un job Artisan) avec droit d’écriture sur le dossier des assets</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ok">
+        Le playground développeur se lance avec <code>npm run dev</code> à la racine du dépôt (port 5173).
+        Cette documentation décrit le <strong>déploiement dans un vrai projet</strong>, pas le playground.
+      </div>
+
+      <h2>Architecture en une phrase</h2>
+      <p>
+        Le <strong>Document Model JSON</strong> est la source de vérité. Le DOM n’est qu’une vue.
+        L’hôte stocke ce JSON (ou le HTML sanitisé) dans sa base, et sert les fichiers
+        <code>ora-editor.js</code> + <code>ora-editor.css</code>.
+      </p>
+
+      <div class="toc">
+        <strong>Sommaire du site</strong>
+        <a href="installation.html">Installation générale</a>
+        <a href="cpanel.html">cPanel</a>
+        <a href="webuzo.html">Webuzo</a>
+        <a href="serveur-web.html">Apache, Nginx, IIS, Plesk</a>
+        <a href="php.html">PHP natif</a>
+        <a href="laravel.html">Laravel</a>
+        <a href="wordpress.html">WordPress</a>
+        <a href="ia.html">Intelligence artificielle</a>
+        <a href="update-manager.html">Update Manager</a>
+        <a href="api.html">API publique</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+
+      <footer class="page-foot">OraEditor 0.1 — documentation d’intégration. Ouvrez ce dossier dans un navigateur (double-clic sur index.html).</footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
+

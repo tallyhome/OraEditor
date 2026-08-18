@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI keys & providers — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="ia.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Operations</p>
+<h1>Artificial intelligence</h1>
+<p class="lead">AI transforms the Document Model (text fragments + paths), never a raw HTML blob. The browser may only know a proxy URL. The key stays on the server.</p>
+<div class="danger"><strong>Golden rule.</strong> Never put <code>sk-…</code> in <code>ora-editor.js</code>, an HTML attribute, or a public Git repo.</div>
+<h2>Providers</h2>
+<table><thead><tr><th>Provider</th><th>Status</th><th>How</th></tr></thead><tbody>
+<tr><td><strong>Mock</strong></td><td>On by default</td><td>No key. Local demo.</td></tr>
+<tr><td><strong>OraAI</strong></td><td>Greyed out</td><td>Not available yet.</td></tr>
+<tr><td><strong>OpenAI / custom</strong></td><td>Via proxy</td><td><code>aiProxyUrl: "/ora-editor/ai"</code> + server key</td></tr>
+<tr><td><strong>Ollama</strong></td><td>Local</td><td><code>createOllamaEngine()</code> + <code>createLocalProvider()</code></td></tr>
+</tbody></table>
+<h2>Request / response</h2>
+<pre><code>{
+  "op": "correct",
+  "scope": "selection",
+  "fragments": [{ "path": [0, 0], "text": "Hello   world" }]
+}</code></pre>
+<pre><code>{ "patches": [{ "path": [0, 0], "text": "Hello world" }] }</code></pre>
+<div class="warn">If the JSON has no <code>patches</code> array, the Core throws “invalid response”. Do not forward the raw ChatGPT payload.</div>
+<footer class="page-foot">PHP example: <a href="../exemples/ai-proxy.php">exemples/ai-proxy.php</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

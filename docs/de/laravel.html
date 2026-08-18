@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laravel — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="de" data-page="laravel.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">PHP / Laravel / WordPress</p><h1>Laravel</h1>
+<pre><code>composer config repositories.ora-laravel path ../OraEditor/packages/laravel
+composer require ora/laravel
+php artisan vendor:publish --tag=ora-assets</code></pre>
+<pre><code>&lt;x-ora::editor :content="$doc" preset="full" wire-model="body" /&gt;</code></pre>
+<p><code>OPENAI_API_KEY</code> → .env — OpenAI-Schlüssel gehören niemals ins öffentliche JS.</p>
+<div class="note">{ "patches": [{ "path", "text" }] }</div>
+<footer class="page-foot"><a href="wordpress.html">WordPress</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

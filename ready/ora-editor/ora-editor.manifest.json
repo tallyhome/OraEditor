@@ -1,0 +1,16 @@
+{
+  "name": "ora-editor",
+  "version": "0.1.0",
+  "channel": "stable",
+  "compatibleCore": "^0.1.0",
+  "files": [
+    "ora-editor.js",
+    "ora-editor.mjs",
+    "ora-editor.css"
+  ],
+  "checksums": {
+    "ora-editor.js": "1afbf75a16d4e1097405bb1964a3403939d8f1e8c077c961317f0eb2c190599a",
+    "ora-editor.mjs": "90aab41f2b1f1311a08e6b39d345d859060184e1f08e48b4d4c8df4cee4c30d4",
+    "ora-editor.css": "0c230bfa217c7f548f2e7c2c2e33be5cc31b097a5116eedc997012a274bb5ebb"
+  }
+}

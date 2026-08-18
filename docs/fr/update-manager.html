@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Update Manager — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="fr" data-page="update-manager.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <p class="kicker">Exploitation</p>
+      <h1>Update Manager</h1>
+      <p class="lead">
+        L’Update Manager est un <strong>outil hôte</strong> : <code>packages/update-manager</code>,
+        package npm <code>@ora-editor/update-manager</code>. Il n’y a pas d’écran dans l’éditeur,
+        pas de dashboard, pas de bouton « Mettre à jour » livré.
+      </p>
+
+      <div class="note">
+        Le navigateur ne peut pas écraser <code>public/ora-editor/ora-editor.js</code>.
+        Toute mise à jour passe par SSH, cron, Artisan, CI, ou un upload FTP manuel.
+      </div>
+
+      <h2>Où il est</h2>
+      <table>
+        <thead><tr><th></th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Code source</td><td><code>packages/update-manager/src/index.ts</code></td></tr>
+          <tr><td>Package</td><td><code>@ora-editor/update-manager</code></td></tr>
+          <tr><td>API</td><td><code>createUpdateManager()</code> → <code>check</code>, <code>apply</code>, <code>sha256</code></td></tr>
+          <tr><td>Exemple prêt</td><td><a href="../exemples/update.mjs">Docs/exemples/update.mjs</a></td></tr>
+        </tbody>
+      </table>
+
+      <h2>Pipeline</h2>
+      <ol class="steps">
+        <li><strong>CHECK</strong> — télécharge le manifest distant (<code>ora-editor.manifest.json</code>).</li>
+        <li><strong>COMPAT</strong> — compare <code>currentVersion</code> et <code>compatibleCore</code>.</li>
+        <li><strong>BACKUP</strong> — copie le dossier assets actuel vers un dossier backup.</li>
+        <li><strong>DOWNLOAD</strong> — récupère l’archive (zip / tarball).</li>
+        <li><strong>VERIFY</strong> — SHA-256 de l’archive = <code>checksumSha256</code> du manifest.</li>
+        <li><strong>INSTALL</strong> — extrait dans le dossier de destination.</li>
+        <li><strong>HEALTHCHECK</strong> — votre callback (fichier JS présent, taille &gt; 0, etc.).</li>
+        <li><strong>SUCCESS</strong> — ou <strong>ROLLBACK</strong> (restaure le backup) en cas d’échec.</li>
+      </ol>
+
+      <h2>Manifest</h2>
+      <p>Produit par <code>npm run package</code> dans <code>dist/ora-editor/ora-editor.manifest.json</code> :</p>
+<pre><code>{
+  "name": "ora-editor",
+  "version": "0.1.0",
+  "channel": "stable",
+  "compatibleCore": "^0.1.0",
+  "files": ["ora-editor.js", "ora-editor.mjs", "ora-editor.css"],
+  "checksums": {}
+}</code></pre>
+      <p>L’Update Manager attend aussi, pour une release distante :</p>
+<pre><code>{
+  "version": "0.1.1",
+  "channel": "stable",
+  "changelog": "Correctifs couleur et colonnes",
+  "checksumSha256": "…hash de l’archive…",
+  "compatibleCore": "^0.1.0",
+  "archiveUrl": "https://exemple.fr/releases/ora-editor-0.1.1.zip"
+}</code></pre>
+      <p>Canaux : <code>stable</code>, <code>beta</code>, <code>nightly</code>. Vous hébergez ces fichiers
+      (GitHub Releases, votre CDN, un bucket). OraEditor ne fournit pas encore un dépôt public de releases.</p>
+
+      <h2>Utilisation Node</h2>
+<pre><code>import { createUpdateManager, createLocalFs } from "@ora-editor/update-manager";
+import { readFile } from "node:fs/promises";
+
+const mgr = createUpdateManager();
+const release = await mgr.check("https://exemple.fr/ora-editor.manifest.json");
+
+await mgr.apply(release, {
+  destDir: "/var/www/site/public/ora-editor",
+  backupDir: "/var/backups/ora-editor",
+  currentVersion: "0.1.0",
+  fetchArchive: (url) =&gt; fetch(url).then((r) =&gt; r.arrayBuffer()).then((b) =&gt; new Uint8Array(b)),
+  extract: async (archive, dest) =&gt; { /* unzip vers dest */ },
+  healthcheck: async () =&gt; {
+    const js = await readFile("/var/www/site/public/ora-editor/ora-editor.js");
+    return js.byteLength &gt; 1000;
+  },
+  fs: createLocalFs(),
+});</code></pre>
+
+      <h2>Brancher dans « votre » dashboard</h2>
+      <p>Si vous avez un back-office (Laravel Nova, Filament, wp-admin, admin maison) :</p>
+      <ol class="steps">
+        <li>Bouton « Vérifier OraEditor » → appelle <code>check(manifestUrl)</code> en SSH/job, pas en Ajax public.</li>
+        <li>Affiche version actuelle vs version distante + changelog.</li>
+        <li>Bouton « Installer » → queue un job serveur <code>apply(…)</code>.</li>
+        <li>Journalisez les étapes renvoyées (<code>check</code>, <code>backup</code>, … <code>success</code> / <code>rollback</code>).</li>
+      </ol>
+      <div class="danger">
+        N’exposez pas <code>apply</code> sur une URL anonyme. Un attaquant écraserait vos JS.
+        Réservez ça à un rôle admin + CSRF + confirmation.
+      </div>
+
+      <h2>Selon l’hébergement</h2>
+      <table>
+        <thead><tr><th>Contexte</th><th>Stratégie</th></tr></thead>
+        <tbody>
+          <tr><td>Mutualisé cPanel sans Node</td><td>Update <strong>manuel</strong> : File Manager, remplacer JS/CSS</td></tr>
+          <tr><td>Webuzo / cPanel + Node.js App</td><td>Cron <code>node bin/ora-update.mjs</code></td></tr>
+          <tr><td>VPS / Docker</td><td>CI (GitHub Actions) qui build + rsync, ou cron Node</td></tr>
+          <tr><td>Laravel</td><td>Commande Artisan + <code>schedule</code></td></tr>
+          <tr><td>WordPress</td><td>Remplacer <code>plugins/ora-editor/assets/</code> ou job serveur</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Mise à jour manuelle (toujours valable)</h2>
+      <ol class="steps">
+        <li>Sur le PC : renvoyez <code>ready/ora-editor/ora-editor.js</code> et <code>.css</code> (déjà compilés).</li>
+        <li>Sauvegardez le dossier <code>ora-editor</code> actuel (zip).</li>
+        <li>Uploadez les nouveaux <code>.js</code> / <code>.css</code> / manifest.</li>
+        <li>Hard-refresh navigateur (<kbd>Ctrl</kbd>+<kbd>F5</kbd>) à cause du cache.</li>
+      </ol>
+
+      <footer class="page-foot">Script clé en main : <a href="../exemples/update.mjs">exemples/update.mjs</a></footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
+

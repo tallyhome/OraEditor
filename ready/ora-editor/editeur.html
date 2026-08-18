@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OraEditor</title>
+  <link rel="stylesheet" href="ora-editor.css">
+  <style>
+    body { margin: 0; font-family: Georgia, serif; background: #faf7f2; color: #1c1917; }
+    .wrap { max-width: 52rem; margin: 1.5rem auto 3rem; padding: 0 1rem; }
+    h1 { font-size: 1.6rem; }
+    button[type="submit"] {
+      margin-top: 1rem; padding: 0.5rem 1rem; border: 0; border-radius: 8px;
+      background: #9a3412; color: #fff; font: inherit; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>OraEditor</h1>
+    <form id="form">
+      <div id="editor"></div>
+      <textarea name="body_json" id="body_json" hidden></textarea>
+      <textarea name="body_html" id="body_html" hidden></textarea>
+      <button type="submit">Enregistrer (démo : affiche le JSON)</button>
+    </form>
+  </div>
+  <script src="ora-editor.js"></script>
+  <script>
+    const editor = new OraEditor({
+      element: "#editor",
+      toolbar: true,
+      preset: "full",
+      uploadImage: async function (file) {
+        const body = new FormData();
+        body.append("file", file);
+        const res = await fetch("upload.php", { method: "POST", body, credentials: "same-origin" });
+        if (!res.ok) throw new Error("Upload échoué");
+        return res.json();
+      },
+      aiProxyUrl: "ai-proxy.php",
+    });
+    document.getElementById("form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      document.getElementById("body_json").value = JSON.stringify(editor.getJSON());
+      document.getElementById("body_html").value = editor.getHTML();
+      alert("Contenu prêt (body_json / body_html). Branchez ce formulaire sur votre PHP pour l’enregistrer.");
+    });
+  </script>
+</body>
+</html>

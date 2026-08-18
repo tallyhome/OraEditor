@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Update Manager — OraEditor</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body data-lang="en" data-page="update-manager.html">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+<p class="kicker">Operations</p>
+<h1>Update Manager</h1>
+<p class="lead">A <strong>host tool</strong>: <code>packages/update-manager</code> / <code>@ora-editor/update-manager</code>. No screen in the editor, no dashboard, no shipped “Update” button.</p>
+<div class="note">The browser cannot overwrite <code>public/ora-editor/ora-editor.js</code>. Updates go through SSH, cron, Artisan, CI, or manual FTP.</div>
+<h2>Pipeline</h2>
+<ol class="steps">
+  <li><strong>CHECK</strong> — download the remote manifest.</li>
+  <li><strong>COMPAT</strong> — compare versions.</li>
+  <li><strong>BACKUP</strong> — copy current assets.</li>
+  <li><strong>DOWNLOAD</strong> — fetch the archive.</li>
+  <li><strong>VERIFY</strong> — SHA-256 matches.</li>
+  <li><strong>INSTALL</strong> — extract to destination.</li>
+  <li><strong>HEALTHCHECK</strong> — your callback.</li>
+  <li><strong>SUCCESS</strong> or <strong>ROLLBACK</strong>.</li>
+</ol>
+<div class="danger">Never expose <code>apply</code> on an anonymous URL.</div>
+<p>Ready script: <a href="../exemples/update.mjs">exemples/update.mjs</a></p>
+<footer class="page-foot">Shared hosting without Node: update JS/CSS by hand.</footer>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
