@@ -6,6 +6,7 @@ import { createEmptyDocument, isElement, isText } from "./types.js";
 import { blockAlign, blockIndent, blockLineHeight, headingLevel, listLevel, listOrdered } from "./schema.js";
 import { isListItem } from "./blocks.js";
 import { normalizeMarks } from "./marks.js";
+import { cellBackground, cellColSpan, cellRowSpan } from "./table.js";
 
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "OBJECT", "EMBED", "LINK", "META"]);
 
@@ -168,7 +169,21 @@ function tableToHTML(node: OraElement): string {
       const inner = cells
         .map((cell) => {
           const tag = cell.attrs?.header === true ? "th" : "td";
-          return `<${tag}>${childrenToHTML(cell)}</${tag}>`;
+          const attrs: string[] = [];
+          const colspan = cellColSpan(cell);
+          const rowspan = cellRowSpan(cell);
+          if (colspan > 1) {
+            attrs.push(`colspan="${colspan}"`);
+          }
+          if (rowspan > 1) {
+            attrs.push(`rowspan="${rowspan}"`);
+          }
+          const background = cellBackground(cell);
+          if (background && isSafeCssColor(background)) {
+            attrs.push(`style="background-color: ${background}"`);
+          }
+          const extra = attrs.length > 0 ? ` ${attrs.join(" ")}` : "";
+          return `<${tag}${extra}>${childrenToHTML(cell)}</${tag}>`;
         })
         .join("");
       return `<tr>${inner}</tr>`;
@@ -604,9 +619,25 @@ function tableFromElement(el: Element): OraElement {
         return;
       }
       const content = mergeInlines(parseInlines(cell, []));
+      const attrs: Record<string, unknown> = {};
+      if (cell.tagName === "TH") {
+        attrs.header = true;
+      }
+      const colspan = Number(cell.getAttribute("colspan"));
+      if (Number.isFinite(colspan) && colspan > 1) {
+        attrs.colspan = Math.min(20, Math.round(colspan));
+      }
+      const rowspan = Number(cell.getAttribute("rowspan"));
+      if (Number.isFinite(rowspan) && rowspan > 1) {
+        attrs.rowspan = Math.min(50, Math.round(rowspan));
+      }
+      const bg = /(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/i.exec(cell.getAttribute("style") ?? "")?.[1]?.trim();
+      if (bg && isSafeCssColor(bg)) {
+        attrs.background = bg;
+      }
       cells.push({
         type: "tableCell",
-        attrs: cell.tagName === "TH" ? { header: true } : undefined,
+        attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
         content: content.length ? content : [{ type: "text", text: "" }],
       });
     });

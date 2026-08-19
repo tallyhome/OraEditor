@@ -140,6 +140,25 @@ export function registerBuiltinCommands(commands: CommandRegistry): void {
   commands.register("tableAddColumn", (editor) => editor.dispatch((tr) => tr.tableAddColumn(), { kind: "format" }));
   commands.register("tableDeleteRow", (editor) => editor.dispatch((tr) => tr.tableDeleteRow(), { kind: "format" }));
   commands.register("tableDeleteColumn", (editor) => editor.dispatch((tr) => tr.tableDeleteColumn(), { kind: "format" }));
+  commands.register("tableMergeRight", (editor) => editor.dispatch((tr) => tr.tableMergeRight(), { kind: "format" }));
+  commands.register("tableMergeDown", (editor) => editor.dispatch((tr) => tr.tableMergeDown(), { kind: "format" }));
+  commands.register("tableSplitCell", (editor) => editor.dispatch((tr) => tr.tableSplitCell(), { kind: "format" }));
+  commands.register("tableToggleHeaderRow", (editor, args) => {
+    const table = typeof args?.table === "number" ? args.table : undefined;
+    const row = typeof args?.row === "number" ? args.row : undefined;
+    return editor.dispatch((tr) => tr.tableToggleHeaderRow(table, row), { kind: "format" });
+  });
+  commands.register("tableSetCellBackground", (editor, args) => {
+    const value = String(args?.value ?? "");
+    return editor.dispatch((tr) => tr.tableSetCellBackground(value), { kind: "format" });
+  });
+  commands.register("removeMark", (editor, args) => {
+    const type = String(args?.type ?? "") as OraMark["type"];
+    if (!type) {
+      return false;
+    }
+    return editor.dispatch((tr) => tr.removeMark(type), { kind: "format" });
+  });
   commands.register("setNodeAttrs", (editor, args) => {
     const path = args?.path as number[] | undefined;
     const attrs = args?.attrs as Record<string, unknown> | undefined;

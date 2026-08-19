@@ -27,6 +27,7 @@ Copier vers ton projet, par exemple :
     element: "#editor",
     toolbar: true,
     preset: "full", // ou "simple"
+    locale: document.documentElement.lang || "fr",
   });
 </script>
 ```

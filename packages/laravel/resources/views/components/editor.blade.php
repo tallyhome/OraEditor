@@ -18,6 +18,7 @@
             element: '#{{ $id ?? "ora-editor" }}',
             preset: '{{ $preset ?? "full" }}',
             toolbar: true,
+            locale: '{{ str_replace("_", "-", app()->getLocale()) }}',
             content: @json($content ?? ''),
             uploadImage: async function (file) {
                 const body = new FormData();

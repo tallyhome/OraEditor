@@ -32,6 +32,7 @@ const SNIPPETS = {
       element: "#editor",
       toolbar: true,
       preset: "full",
+      locale: document.documentElement.lang || "fr",
     });
     document.querySelector("form")?.addEventListener("submit", function () {
       document.getElementById("body").value = JSON.stringify(editor.getJSON());
@@ -196,7 +197,7 @@ ${pre(SNIPPETS.tree)}
 <tr><td>Reasonable CSP</td><td>Scripts only from your origin</td></tr>
 <tr><td>CORS only if the front is on another domain</td><td>Otherwise unused</td></tr>
 </tbody></table>
-<p>After updating JS/CSS, hard-refresh or suffix <code>?v=0.1.1</code>.</p>
+<p>After updating JS/CSS, hard-refresh or suffix <code>?v=0.1.2</code>.</p>
 <footer class="page-foot"><a href="php.html">Wire upload + AI in PHP</a></footer>`],
     php: ["PHP", `<p class="kicker">Frameworks</p>
 <h1>PHP</h1>
@@ -287,12 +288,14 @@ ${pre(`const editor = new OraEditor({
   content: "<p>Hello</p>",
   toolbar: true,
   preset: "full",
+  locale: document.documentElement.lang || "en",
   uploadImage: async (file, ctx) => ({ url, alt }),
   aiProxyUrl: "/ora-editor/ai",
 });`)}
 <h2>Useful methods</h2>
-<p><code>getJSON</code> / <code>setJSON</code>, <code>getHTML</code> / <code>setHTML</code>, <code>runAI</code>, <code>exec</code>, <code>undo</code> / <code>redo</code>, <code>destroy</code>.</p>
+<p><code>getJSON</code> / <code>setJSON</code>, <code>getHTML</code> / <code>setHTML</code>, <code>setLocale</code>, <code>getStats</code>, <code>openFindBar</code>, <code>runAI</code>, <code>exec</code>, <code>undo</code> / <code>redo</code>, <code>destroy</code>.</p>
 <p>Events: <code>ready</code>, <code>change</code>, <code>imageUpload*</code>, <code>aiRequest*</code>.</p>
+<p>Locales: <code>fr</code>, <code>en</code>, <code>ru</code>, <code>pt</code>, <code>es</code>, <code>it</code>, <code>de</code>.</p>
 <footer class="page-foot"><a href="faq.html">FAQ</a></footer>`],
     faq: ["FAQ", `<p class="kicker">Operations</p>
 <h1>FAQ</h1>
@@ -449,8 +452,8 @@ ${pre(SNIPPETS.aiReq)}${pre(SNIPPETS.aiRes)}
 <p><a href="../exemples/update.mjs">update.mjs</a></p>
 <div class="danger">${s.neverKey}</div>`],
     api: ["API", `<p class="kicker">${start}</p><h1>API</h1>
-${pre("new OraEditor({ element: '#editor', toolbar: true, preset: 'full', aiProxyUrl: '/ora-editor/ai' })")}
-<p>getJSON · setJSON · getHTML · runAI · exec · undo · destroy</p>
+${pre("new OraEditor({ element: '#editor', toolbar: true, preset: 'full', locale: document.documentElement.lang, aiProxyUrl: '/ora-editor/ai' })")}
+<p>getJSON · setJSON · getHTML · setLocale · getStats · openFindBar · runAI · exec · undo · destroy</p>
 <p>ready · change · imageUpload* · aiRequest*</p>
 <footer class="page-foot"><a href="faq.html">FAQ</a></footer>`],
     faq: ["FAQ", `<p class="kicker">${ops}</p><h1>FAQ</h1>

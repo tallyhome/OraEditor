@@ -3,6 +3,7 @@ export function showLinkPopover(
   anchor: HTMLElement,
   options: {
     href: string;
+    labels?: { open: string; edit: string; remove: string };
     onOpen: () => void;
     onEdit: () => void;
     onRemove: () => void;
@@ -12,11 +13,14 @@ export function showLinkPopover(
   const pop = document.createElement("div");
   pop.className = "ora-link-popover";
   pop.setAttribute("role", "dialog");
+  const open = options.labels?.open ?? "Ouvrir";
+  const edit = options.labels?.edit ?? "Modifier";
+  const remove = options.labels?.remove ?? "Retirer";
   pop.innerHTML = `
     <a class="ora-link-popover-url" href="${escapeAttr(options.href)}" target="_blank" rel="noopener noreferrer">${escapeText(options.href)}</a>
-    <button type="button" data-open>Ouvrir</button>
-    <button type="button" data-edit>Modifier</button>
-    <button type="button" data-remove>Retirer</button>
+    <button type="button" data-open>${escapeText(open)}</button>
+    <button type="button" data-edit>${escapeText(edit)}</button>
+    <button type="button" data-remove>${escapeText(remove)}</button>
   `;
   const hostRect = host.getBoundingClientRect();
   const linkRect = anchor.getBoundingClientRect();

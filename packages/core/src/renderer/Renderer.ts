@@ -2,6 +2,8 @@ import type { OraDocument, OraElement, OraMark, OraNode, OraText, Point } from "
 import { isElement, isText } from "../document/types.js";
 import { blockAlign, blockIndent, blockLineHeight, headingLevel, listLevel, listOrdered } from "../document/schema.js";
 import { isAtomicBlock, isListItem, isTable } from "../document/blocks.js";
+import { isEmptyDocument } from "../document/search.js";
+import { cellBackground, cellColSpan, cellRowSpan } from "../document/table.js";
 import { isSafeEmbedUrl } from "../security/embed.js";
 import { normalizeMarks } from "../document/marks.js";
 import type { Selection, TextSelection } from "../selection/types.js";
@@ -12,6 +14,8 @@ import { isSafeUrl } from "../security/urls.js";
 export class Renderer {
   readonly contentEl: HTMLElement;
   private blockHashes: string[] = [];
+  private placeholder = "";
+  private headerLabel = "";
 
   constructor(host: HTMLElement) {
     this.contentEl = document.createElement("div");
@@ -21,6 +25,15 @@ export class Renderer {
     this.contentEl.setAttribute("aria-multiline", "true");
     this.contentEl.spellcheck = true;
     host.appendChild(this.contentEl);
+  }
+
+  setPlaceholder(text: string): void {
+    this.placeholder = text;
+    this.contentEl.dataset.placeholder = text;
+  }
+
+  setHeaderLabel(text: string): void {
+    this.headerLabel = text;
   }
 
   render(doc: OraDocument, selection: Selection, syncSelection = true): void {
@@ -49,6 +62,12 @@ export class Renderer {
       this.contentEl.lastElementChild?.remove();
     }
     this.blockHashes = hashes;
+    this.contentEl.classList.toggle("ora-is-empty", isEmptyDocument(doc));
+    this.contentEl.dataset.placeholder = this.placeholder;
+    this.contentEl.querySelectorAll<HTMLElement>("[data-ora-toggle-header]").forEach((handle) => {
+      handle.title = this.headerLabel;
+      handle.setAttribute("aria-label", this.headerLabel);
+    });
     if (syncSelection) {
       this.applySelection(selection);
     }
@@ -198,6 +217,27 @@ function renderTable(node: OraElement, index: number): HTMLElement {
       }
       const td = document.createElement(cell.attrs?.header === true ? "th" : "td");
       td.dataset.oraPath = `${index}.${r}.${c}`;
+      const colspan = cellColSpan(cell);
+      const rowspan = cellRowSpan(cell);
+      if (colspan > 1) {
+        td.colSpan = colspan;
+      }
+      if (rowspan > 1) {
+        td.rowSpan = rowspan;
+      }
+      const background = cellBackground(cell);
+      if (background && isSafeCssColor(background)) {
+        td.style.backgroundColor = background;
+      }
+      if (c === 0) {
+        const handle = document.createElement("button");
+        handle.type = "button";
+        handle.className = "ora-row-handle";
+        handle.tabIndex = -1;
+        handle.contentEditable = "false";
+        handle.dataset.oraToggleHeader = `${index}.${r}`;
+        td.appendChild(handle);
+      }
       const content = cell.content ?? [];
       if (content.length === 0) {
         const span = document.createElement("span");

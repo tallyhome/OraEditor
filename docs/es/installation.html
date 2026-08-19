@@ -30,6 +30,7 @@
       element: "#editor",
       toolbar: true,
       preset: "full",
+      locale: document.documentElement.lang || "fr",
     });
     document.querySelector("form")?.addEventListener("submit", function () {
       document.getElementById("body").value = JSON.stringify(editor.getJSON());

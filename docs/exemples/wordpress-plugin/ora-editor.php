@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OraEditor
  * Description: Embarque OraEditor (shortcode + metabox + REST upload/IA).
- * Version: 0.1.0
+ * Version: 0.1.2
  * Requires at least: 6.4
  * Requires PHP: 8.1
  */
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-const ORA_EDITOR_VERSION = '0.1.0';
+const ORA_EDITOR_VERSION = '0.1.2';
 
 add_action('admin_menu', static function (): void {
     add_options_page('OraEditor', 'OraEditor', 'manage_options', 'ora-editor', 'ora_editor_settings_page');
@@ -66,6 +66,7 @@ add_shortcode('ora_editor', static function (array $atts): string {
         'upload' => rest_url('ora-editor/v1/upload'),
         'ai' => rest_url('ora-editor/v1/ai'),
         'nonce' => wp_create_nonce('wp_rest'),
+        'locale' => str_replace('_', '-', determine_locale()),
     ];
     wp_add_inline_script('ora-editor', 'window.oraEditorRest = ' . wp_json_encode($rest) . ';', 'before');
     $id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $atts['id']) ?: 'ora-editor';
@@ -79,6 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
     element: "#{$id}",
     toolbar: true,
     preset: "{$preset}",
+    locale: rest.locale || document.documentElement.lang || "fr",
     content: {$initial},
     aiProxyUrl: rest.ai,
     uploadImage: async function (file) {
@@ -112,6 +114,7 @@ function ora_editor_metabox(\WP_Post $post): void
         'upload' => rest_url('ora-editor/v1/upload'),
         'ai' => rest_url('ora-editor/v1/ai'),
         'nonce' => wp_create_nonce('wp_rest'),
+        'locale' => str_replace('_', '-', determine_locale()),
     ];
     wp_add_inline_script('ora-editor', 'window.oraEditorRest = ' . wp_json_encode($rest) . ';', 'before');
     $json = (string) get_post_meta($post->ID, '_ora_document', true);
@@ -130,6 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
     element: "#ora-editor-admin",
     toolbar: true,
     preset: "full",
+    locale: rest.locale || document.documentElement.lang || "fr",
     content: initial || "",
     aiProxyUrl: rest.ai,
     uploadImage: async function (file) {

@@ -60,11 +60,17 @@ export function toggleMarkIn(marks: OraMark[] | undefined, mark: OraMark): OraMa
   if (hasMark(current, mark.type)) {
     return current.filter((item) => item.type !== mark.type);
   }
-  return normalizeMarks([...current, mark]);
+  return addMarkIn(current, mark);
 }
 
 export function addMarkIn(marks: OraMark[] | undefined, mark: OraMark): OraMark[] {
-  return normalizeMarks([...(marks ?? []).filter((item) => item.type !== mark.type), mark]);
+  let current = (marks ?? []).filter((item) => item.type !== mark.type);
+  if (mark.type === "superscript") {
+    current = current.filter((item) => item.type !== "subscript");
+  } else if (mark.type === "subscript") {
+    current = current.filter((item) => item.type !== "superscript");
+  }
+  return normalizeMarks([...current, mark]);
 }
 
 export function removeMarkIn(marks: OraMark[] | undefined, type: OraMark["type"]): OraMark[] {

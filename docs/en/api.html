@@ -19,12 +19,14 @@
   content: "&lt;p&gt;Hello&lt;/p&gt;",
   toolbar: true,
   preset: "full",
+  locale: document.documentElement.lang || "en",
   uploadImage: async (file, ctx) =&gt; ({ url, alt }),
   aiProxyUrl: "/ora-editor/ai",
 });</code></pre>
 <h2>Useful methods</h2>
-<p><code>getJSON</code> / <code>setJSON</code>, <code>getHTML</code> / <code>setHTML</code>, <code>runAI</code>, <code>exec</code>, <code>undo</code> / <code>redo</code>, <code>destroy</code>.</p>
+<p><code>getJSON</code> / <code>setJSON</code>, <code>getHTML</code> / <code>setHTML</code>, <code>setLocale</code>, <code>getStats</code>, <code>openFindBar</code>, <code>runAI</code>, <code>exec</code>, <code>undo</code> / <code>redo</code>, <code>destroy</code>.</p>
 <p>Events: <code>ready</code>, <code>change</code>, <code>imageUpload*</code>, <code>aiRequest*</code>.</p>
+<p>Locales: <code>fr</code>, <code>en</code>, <code>ru</code>, <code>pt</code>, <code>es</code>, <code>it</code>, <code>de</code>.</p>
 <footer class="page-foot"><a href="faq.html">FAQ</a></footer>
     </main>
   </div>

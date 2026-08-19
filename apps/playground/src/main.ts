@@ -6,8 +6,9 @@ const editor = new OraEditor({
   element: "#editor",
   preset: "full",
   toolbar: true,
+  locale: "fr",
   content: `<h1>OraEditor</h1>
-<p>Phase 3–13 : images, tableaux, médias, IA, presets Simple/Full.</p>
+<p>Phase typo, tableaux Excel light, recherche et toolbar traduite.</p>
 <figure><img src="https://picsum.photos/seed/ora/640/280" alt="Exemple"><figcaption>Image de démonstration</figcaption></figure>
 <table>
   <tr><th>Colonne A</th><th>Colonne B</th></tr>

@@ -1,8 +1,13 @@
+import type { OraEditor } from "../api/OraEditor.js";
+
 export function openPromptDialog(
   host: HTMLElement,
   title: string,
   fields: Array<{ name: string; label: string; type?: string; value?: string; placeholder?: string }>,
+  editor?: OraEditor,
 ): Promise<Record<string, string> | null> {
+  const cancelLabel = editor?.t("cancel") ?? "Annuler";
+  const applyLabel = editor?.t("apply") ?? "Appliquer";
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "ora-dialog-overlay";
@@ -20,8 +25,8 @@ export function openPromptDialog(
         <h2>${escapeText(title)}</h2>
         ${inputs}
         <div class="ora-dialog-actions">
-          <button type="button" data-cancel>Annuler</button>
-          <button type="submit">Appliquer</button>
+          <button type="button" data-cancel>${escapeText(cancelLabel)}</button>
+          <button type="submit">${escapeText(applyLabel)}</button>
         </div>
       </form>
     `;

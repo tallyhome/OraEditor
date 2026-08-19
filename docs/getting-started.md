@@ -46,7 +46,7 @@ Usage hôte (sans npm au runtime) :
 import OraEditor from "@ora-editor/core";
 import "@ora-editor/core/style.css";
 
-const editor = new OraEditor({ element: "#editor", toolbar: true, preset: "full" });
+const editor = new OraEditor({ element: "#editor", toolbar: true, preset: "full", locale: "fr" });
 editor.getJSON();
 editor.setJSON(doc);
 editor.getHTML();

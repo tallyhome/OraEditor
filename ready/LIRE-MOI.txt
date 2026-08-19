@@ -12,4 +12,7 @@ OraEditor — kit prêt à installer
 
 Rien à compiler. Pas besoin de Node, ni de npm, ni de "npm run build".
 
+La langue de la barre d'outils suit l'attribut lang de la page
+(fr, en, ru, pt, es, it, de). Exemple : <html lang="en">.
+
 Dossier uploads/ : déjà créé. S'il refuse les images, droits 755 ou 775.

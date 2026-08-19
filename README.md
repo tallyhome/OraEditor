@@ -14,7 +14,7 @@
 - [Packaging](docs/packaging.md)
 - [Contribuer](docs/contributing.md)
 
-Kit prêt à coller dans un projet (cPanel, PHP…) : dossier **`ready/ora-editor/`** — rien à compiler. Ouvrez ensuite `/ora-editor/editeur.html`.
+Kit prêt à coller dans un projet (cPanel, PHP…) : dossier **`ready/ora-editor/`** — rien à compiler. Ouvrez ensuite `/ora-editor/editeur.html`. Toolbar traduite (`locale` / `lang` de la page : FR, EN, RU, PT, ES, IT, DE).
 
 ```bash
 npm install

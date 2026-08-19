@@ -71,6 +71,16 @@ export function bindInput(editor: OraEditor, contentEl: HTMLElement): () => void
       void promptLink(editor);
       return;
     }
+    if (meta && event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      editor.openFindBar();
+      return;
+    }
+    if (meta && event.key.toLowerCase() === "h") {
+      event.preventDefault();
+      editor.openFindBar(true);
+      return;
+    }
     if (meta && event.shiftKey && event.key.toLowerCase() === "x") {
       event.preventDefault();
       editor.exec("toggleMark", { mark: { type: "strike" } });
@@ -164,6 +174,15 @@ export function bindInput(editor: OraEditor, contentEl: HTMLElement): () => void
     if (!(target instanceof Element)) {
       return;
     }
+    const handle = target.closest<HTMLElement>("[data-ora-toggle-header]");
+    if (handle && contentEl.contains(handle)) {
+      event.preventDefault();
+      const parts = handle.dataset.oraToggleHeader?.split(".").map(Number);
+      if (parts && parts.length >= 2 && parts.every((part) => !Number.isNaN(part))) {
+        editor.exec("tableToggleHeaderRow", { table: parts[0], row: parts[1] });
+      }
+      return;
+    }
     const atomic = target.closest<HTMLElement>("[data-ora-node]");
     if (atomic && contentEl.contains(atomic) && atomic.dataset.oraNode !== "table") {
       event.preventDefault();
@@ -203,6 +222,7 @@ export function bindInput(editor: OraEditor, contentEl: HTMLElement): () => void
     editor.selectActiveLink();
     showLinkPopover(editor.hostElement, anchor as HTMLElement, {
       href,
+      labels: { open: editor.t("open"), edit: editor.t("edit"), remove: editor.t("remove") },
       onOpen: () => openExternalUrl(href),
       onEdit: () => {
         void promptLink(editor);
@@ -321,7 +341,7 @@ async function promptLink(editor: OraEditor): Promise<void> {
   const result = await openLinkDialog(editor.hostElement, {
     href: current && current.type === "link" ? current.href : "",
     target: current && current.type === "link" ? current.target : undefined,
-  });
+  }, editor);
   if (result) {
     editor.exec("setLink", { href: result.href, target: result.target, rel: result.rel });
   }

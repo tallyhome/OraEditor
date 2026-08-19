@@ -4,11 +4,22 @@ import { getNode, getParent, hasNode, nodeLength, textContent } from "../documen
 import { pathEquals, pathIndex, pathNext, pathParent, pathPrevious } from "../document/path.js";
 import { pointEquals } from "../document/point.js";
 import { addMarkIn, hasMark, marksEqual, removeMarkIn, toggleMarkIn } from "../document/marks.js";
-import { emptyTable, isAtomicBlock, isListItem, isTable, isTextBlock } from "../document/blocks.js";
+import { emptyCell, emptyTable, isAtomicBlock, isListItem, isTable, isTextBlock } from "../document/blocks.js";
 import { blockIndent, listLevel, listOrdered } from "../document/schema.js";
+import { matchBlockShortcut, matchBoldShortcut } from "../document/markdown.js";
+import {
+  buildTableGrid,
+  cellColSpan,
+  cellRowSpan,
+  findOriginSlot,
+  originInsertIndex,
+  spanAttrs,
+  tableVisualWidth,
+} from "../document/table.js";
 import { nextNormalizeOp } from "../document/normalize.js";
 import { linkRangeAt } from "../document/linkRange.js";
 import { isSafeUrl } from "../security/urls.js";
+import { isSafeCssColor } from "../security/css.js";
 import type { Selection, TextSelection } from "../selection/types.js";
 import { collapsed, isCollapsed, isTextSelection, selectionEdges } from "../selection/types.js";
 import { applyOperation } from "./apply.js";
@@ -93,7 +104,8 @@ export class Transform {
       this.applyOp({ type: "insert_text", path: point.path, offset: point.offset, text });
     }
     this.storedMarks = null;
-    return this.normalize();
+    this.normalize();
+    return this.applyMarkdownShortcuts(text);
   }
 
   deleteSelection(): this {
@@ -517,11 +529,30 @@ export class Transform {
     if (!isTable(table)) {
       return this;
     }
-    const cols = isElement(table.content?.[0] ?? { type: "tableRow" }) ? (table.content?.[0] as OraElement).content?.length ?? 1 : 1;
+    const coverageGrid = buildTableGrid(table);
+    const width = Math.max(1, tableVisualWidth(coverageGrid));
+    const insertAt = loc.row + 1;
+    const covered = new Set<number>();
+    for (let col = 0; col < width; col += 1) {
+      for (let r = 0; r <= loc.row; r += 1) {
+        const slot = coverageGrid[r]?.[col];
+        if (!slot?.origin) {
+          continue;
+        }
+        const origin = getNode(this.doc, [loc.table, slot.row, slot.cell]);
+        if (!isElement(origin)) {
+          continue;
+        }
+        if (slot.row + cellRowSpan(origin) > insertAt) {
+          covered.add(col);
+        }
+      }
+    }
+    const cells = Array.from({ length: width }, (_, col) => (covered.has(col) ? null : emptyCell()));
     this.applyOp({
       type: "insert_node",
-      path: [loc.table, loc.row + 1],
-      node: { type: "tableRow", content: Array.from({ length: cols }, () => ({ type: "tableCell", content: [{ type: "text", text: "" }] })) },
+      path: [loc.table, insertAt],
+      node: { type: "tableRow", content: cells.filter((cell): cell is OraElement => cell !== null) },
     });
     return this.normalize();
   }
@@ -592,6 +623,119 @@ export class Transform {
     return this.normalize();
   }
 
+  tableMergeRight(): this {
+    return this.mergeTableCell("right");
+  }
+
+  tableMergeDown(): this {
+    return this.mergeTableCell("down");
+  }
+
+  tableSplitCell(): this {
+    const loc = this.tableLocation();
+    if (!loc) {
+      return this;
+    }
+    const table = getNode(this.doc, [loc.table]);
+    if (!isTable(table)) {
+      return this;
+    }
+    const cell = getNode(this.doc, [loc.table, loc.row, loc.col]);
+    if (!isElement(cell) || cell.type !== "tableCell") {
+      return this;
+    }
+    const cs = cellColSpan(cell);
+    const rs = cellRowSpan(cell);
+    if (cs === 1 && rs === 1) {
+      return this;
+    }
+    const origin = findOriginSlot(buildTableGrid(table), loc.row, loc.col);
+    if (!origin) {
+      return this;
+    }
+    const extra = { ...(cell.attrs ?? {}) };
+    delete extra.colspan;
+    delete extra.rowspan;
+    this.applyOp({
+      type: "set_node",
+      path: [loc.table, loc.row, loc.col],
+      properties: { type: "tableCell", attrs: cell.attrs },
+      newProperties: { type: "tableCell", attrs: Object.keys(extra).length > 0 ? extra : undefined },
+    });
+    const header = cell.attrs?.header === true;
+    for (let i = 0; i < cs - 1; i += 1) {
+      this.applyOp({ type: "insert_node", path: [loc.table, loc.row, loc.col + 1], node: emptyCell(header) });
+    }
+    for (let dr = 1; dr < rs; dr += 1) {
+      const current = getNode(this.doc, [loc.table]);
+      if (!isTable(current)) {
+        break;
+      }
+      const insertIndex = originInsertIndex(buildTableGrid(current), loc.row + dr, origin.visualCol);
+      for (let i = 0; i < cs; i += 1) {
+        this.applyOp({ type: "insert_node", path: [loc.table, loc.row + dr, insertIndex], node: emptyCell() });
+      }
+    }
+    return this.normalize();
+  }
+
+  tableToggleHeaderRow(tableIndex?: number, rowIndex?: number): this {
+    const loc = tableIndex !== undefined && rowIndex !== undefined
+      ? { table: tableIndex, row: rowIndex, col: 0 }
+      : this.tableLocation();
+    if (!loc) {
+      return this;
+    }
+    const row = getNode(this.doc, [loc.table, loc.row]);
+    if (!isElement(row) || row.type !== "tableRow") {
+      return this;
+    }
+    const cells = (row.content ?? []).filter(isElement);
+    const allHeader = cells.length > 0 && cells.every((cell) => cell.attrs?.header === true);
+    cells.forEach((cell, index) => {
+      const attrs = { ...(cell.attrs ?? {}) };
+      if (allHeader) {
+        delete attrs.header;
+      } else {
+        attrs.header = true;
+      }
+      this.applyOp({
+        type: "set_node",
+        path: [loc.table, loc.row, index],
+        properties: { type: "tableCell", attrs: cell.attrs },
+        newProperties: { type: "tableCell", attrs: Object.keys(attrs).length > 0 ? attrs : undefined },
+      });
+    });
+    return this.normalize();
+  }
+
+  tableSetCellBackground(value: string): this {
+    const loc = this.tableLocation();
+    if (!loc) {
+      return this;
+    }
+    const cell = getNode(this.doc, [loc.table, loc.row, loc.col]);
+    if (!isElement(cell) || cell.type !== "tableCell") {
+      return this;
+    }
+    const attrs = { ...(cell.attrs ?? {}) };
+    const trimmed = value.trim();
+    if (!trimmed) {
+      delete attrs.background;
+    } else if (isSafeCssColor(trimmed)) {
+      attrs.background = trimmed;
+    } else {
+      return this;
+    }
+    this.applyOp({
+      type: "set_node",
+      path: [loc.table, loc.row, loc.col],
+      properties: { type: "tableCell", attrs: cell.attrs },
+      newProperties: { type: "tableCell", attrs: Object.keys(attrs).length > 0 ? attrs : undefined },
+    });
+    return this.normalize();
+  }
+
   replaceTextAt(path: number[], text: string): this {
     if (!hasNode(this.doc, path)) {
       return this;
@@ -619,6 +763,111 @@ export class Transform {
     const nextPath = lastTextPath(this.doc, nextIndex) ?? [nextIndex, 0];
     this.setSelection(collapsed({ path: nextPath, offset: 0 }));
     return this.normalize();
+  }
+
+  private mergeTableCell(direction: "right" | "down"): this {
+    const loc = this.tableLocation();
+    if (!loc) {
+      return this;
+    }
+    const table = getNode(this.doc, [loc.table]);
+    if (!isTable(table)) {
+      return this;
+    }
+    const cell = getNode(this.doc, [loc.table, loc.row, loc.col]);
+    if (!isElement(cell) || cell.type !== "tableCell") {
+      return this;
+    }
+    const grid = buildTableGrid(table);
+    const origin = findOriginSlot(grid, loc.row, loc.col);
+    if (!origin) {
+      return this;
+    }
+    const cs = cellColSpan(cell);
+    const rs = cellRowSpan(cell);
+    const nextSlot =
+      direction === "right" ? grid[origin.visualRow]?.[origin.visualCol + cs] : grid[origin.visualRow + rs]?.[origin.visualCol];
+    if (!nextSlot?.origin) {
+      return this;
+    }
+    const neighbor = getNode(this.doc, [loc.table, nextSlot.row, nextSlot.cell]);
+    if (!isElement(neighbor) || neighbor.type !== "tableCell") {
+      return this;
+    }
+    if (direction === "right" && cellRowSpan(neighbor) !== rs) {
+      return this;
+    }
+    if (direction === "down" && cellColSpan(neighbor) !== cs) {
+      return this;
+    }
+    const nextColspan = direction === "right" ? cs + cellColSpan(neighbor) : cs;
+    const nextRowspan = direction === "down" ? rs + cellRowSpan(neighbor) : rs;
+    const attrs = spanAttrs(nextColspan, nextRowspan, { ...(cell.attrs ?? {}) });
+    const currentLen = (cell.content ?? []).length;
+    let inserted = 0;
+    for (const child of neighbor.content ?? []) {
+      if (isText(child) && child.text.length === 0) {
+        continue;
+      }
+      this.applyOp({ type: "insert_node", path: [loc.table, loc.row, loc.col, currentLen + inserted], node: cloneNode(child) });
+      inserted += 1;
+    }
+    this.applyOp({
+      type: "set_node",
+      path: [loc.table, loc.row, loc.col],
+      properties: { type: "tableCell", attrs: cell.attrs },
+      newProperties: { type: "tableCell", attrs },
+    });
+    this.applyOp({ type: "remove_node", path: [loc.table, nextSlot.row, nextSlot.cell], node: neighbor });
+    this.setSelection(collapsed({ path: [loc.table, loc.row, loc.col, 0], offset: 0 }));
+    return this.normalize();
+  }
+
+  private applyMarkdownShortcuts(inserted: string): this {
+    if (!isTextSelection(this.selection) || !isCollapsed(this.selection)) {
+      return this;
+    }
+    const point = this.selection.anchor;
+    if (!hasNode(this.doc, point.path)) {
+      return this;
+    }
+    const node = getNode(this.doc, point.path);
+    if (!isText(node)) {
+      return this;
+    }
+    const block = getNode(this.doc, [point.path[0] ?? 0]);
+    if (!isElement(block) || block.type === "codeBlock") {
+      return this;
+    }
+    if (inserted === "*" ) {
+      const match = matchBoldShortcut(node.text.slice(0, point.offset));
+      if (match) {
+        const marks = addMarkIn(node.marks, { type: "bold" });
+        this.applyOp({ type: "remove_text", path: point.path, offset: match.from, text: match.raw });
+        this.setSelection(collapsed({ path: point.path, offset: match.from }));
+        this.insertMarkedText({ path: point.path, offset: match.from }, match.inner, marks);
+        return this.normalize();
+      }
+    }
+    if (inserted !== " " || point.path.length !== 2 || !isTextBlock(block)) {
+      return this;
+    }
+    const prefix = node.text.slice(0, point.offset);
+    const shortcut = matchBlockShortcut(prefix);
+    if (!shortcut || (point.path[1] ?? 1) !== 0) {
+      return this;
+    }
+    if (shortcut.kind === "list" && isListItem(block)) {
+      return this;
+    }
+    this.applyOp({ type: "remove_text", path: point.path, offset: 0, text: prefix });
+    if (shortcut.kind === "heading") {
+      return this.setBlockType("heading", { level: shortcut.level });
+    }
+    if (shortcut.kind === "blockquote") {
+      return this.setBlockType("blockquote");
+    }
+    return this.toggleList(shortcut.ordered);
   }
 
   private tableLocation(): { table: number; row: number; col: number } | null {

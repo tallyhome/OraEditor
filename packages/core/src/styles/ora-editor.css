@@ -35,6 +35,18 @@
   line-height: var(--ora-line-height);
   min-height: 12rem;
   caret-color: var(--ora-color-accent);
+  position: relative;
+}
+
+.ora-content.ora-is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--ora-color-muted);
+  pointer-events: none;
+  position: absolute;
+  top: 1.25rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  opacity: 0.7;
 }
 
 .ora-content:focus {
@@ -357,9 +369,10 @@
 }
 
 .ora-table {
-  width: 100%;
+  width: calc(100% - 0.85rem);
+  margin-left: 0.85rem;
   border-collapse: collapse;
-  margin: 0 0 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .ora-table th,
@@ -368,11 +381,89 @@
   padding: 0.4rem 0.55rem;
   min-width: 4rem;
   vertical-align: top;
+  position: relative;
 }
 
 .ora-table th {
   background: #f5f5f4;
   font-weight: 650;
+}
+
+.ora-row-handle {
+  position: absolute;
+  left: -0.7rem;
+  top: 0.15rem;
+  width: 0.55rem;
+  height: calc(100% - 0.3rem);
+  min-height: 1.1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: #d6d3d1;
+  cursor: pointer;
+}
+
+.ora-row-handle:hover {
+  background: var(--ora-color-accent);
+}
+
+.ora-findbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-bottom: 1px solid var(--ora-color-border);
+  background: #fff;
+}
+
+.ora-findbar[hidden] {
+  display: none;
+}
+
+.ora-findbar input[type="search"],
+.ora-findbar input[type="text"] {
+  min-width: 8rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--ora-color-border);
+  border-radius: 7px;
+  font: inherit;
+}
+
+.ora-findbar button {
+  border: 1px solid transparent;
+  background: #f5f5f4;
+  border-radius: 7px;
+  min-height: 1.8rem;
+  padding: 0 0.45rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ora-findbar-count {
+  min-width: 3.2rem;
+  font-size: 0.78rem;
+  color: var(--ora-color-muted);
+}
+
+.ora-findbar-case {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--ora-color-muted);
+}
+
+.ora-statusbar {
+  padding: 0.3rem 0.8rem 0.45rem;
+  border-top: 1px solid var(--ora-color-border);
+  font-size: 0.75rem;
+  color: var(--ora-color-muted);
+  background: #fafaf9;
+}
+
+.ora-toolbar select {
+  max-width: 7.5rem;
 }
 
 .ora-ai-panel {

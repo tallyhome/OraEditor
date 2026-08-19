@@ -39,10 +39,14 @@ import type { AICapability } from "../ai/types.js";
 import { cleanPastedHtml } from "../clipboard/index.js";
 import { mountToolbar } from "../ui/toolbar.js";
 import { extractAIFragments, mountAIPanel } from "../ui/aiPanel.js";
+import { mountFindBar } from "../ui/findBar.js";
+import { mountStatusBar } from "../ui/statusBar.js";
 import { blobUploadAdapter } from "../adapters/upload.js";
 import { validateImageFile } from "../security/files.js";
 import type { OraEditorOptions, OraFeatures } from "./options.js";
 import { resolveFeatures } from "./options.js";
+import { documentStats } from "../document/search.js";
+import { resolveLocale, t as translate, type OraLocale, type OraMessageKey } from "../i18n/index.js";
 
 export interface DispatchOptions {
   history?: boolean;
@@ -64,6 +68,12 @@ export class OraEditor {
   readonly ai = new AIProviderRegistry();
   readonly options: OraEditorOptions;
   readonly features: OraFeatures;
+  locale: OraLocale;
+  openFindBar: (focusReplace?: boolean) => void = () => undefined;
+  refreshToolbar: () => void = () => undefined;
+  refreshFindBar: () => void = () => undefined;
+  refreshStatusBar: () => void = () => undefined;
+  refreshAIPanel: () => void = () => undefined;
   readonly ui = {
     addToolbarButton: (spec: { id: string; title: string; label: string; onClick: () => void }) => {
       const bar = this.root.querySelector(".ora-toolbar");
@@ -89,6 +99,8 @@ export class OraEditor {
   private readonly unbindInput: () => void;
   private unbindToolbar: (() => void) | null = null;
   private unbindAI: (() => void) | null = null;
+  private unbindFind: (() => void) | null = null;
+  private unbindStatus: (() => void) | null = null;
   private destroyed = false;
   private busy = false;
   private state: {
@@ -100,12 +112,16 @@ export class OraEditor {
   constructor(options: OraEditorOptions) {
     this.options = options;
     this.features = resolveFeatures(options);
+    this.locale = resolveLocale(options.locale);
     this.host = resolveElement(options.element);
     this.host.classList.add("ora-editor");
+    this.host.lang = this.locale;
     this.root = document.createElement("div");
     this.root.className = "ora-root";
     this.host.appendChild(this.root);
     this.renderer = new Renderer(this.root);
+    this.renderer.setPlaceholder(options.placeholder ?? translate(this.locale, "placeholder"));
+    this.renderer.setHeaderLabel(translate(this.locale, "toggleHeaderRow"));
     if (options.editable === false) {
       this.renderer.contentEl.contentEditable = "false";
     }
@@ -128,6 +144,10 @@ export class OraEditor {
     if (options.toolbar) {
       const toolbarHost = options.toolbar === true ? this.root : options.toolbar;
       this.unbindToolbar = mountToolbar(this, toolbarHost, this.features);
+    }
+    this.unbindFind = mountFindBar(this, this.root);
+    if (options.toolbar) {
+      this.unbindStatus = mountStatusBar(this, this.root);
     }
     if (this.features.ai && options.toolbar) {
       this.unbindAI = mountAIPanel(this, this.root);
@@ -508,6 +528,35 @@ export class OraEditor {
     return this.host.classList.contains("ora-editor--fullscreen");
   }
 
+  t(key: OraMessageKey, vars?: Record<string, string | number>): string {
+    return translate(this.locale, key, vars);
+  }
+
+  setLocale(locale: string): void {
+    this.locale = resolveLocale(locale);
+    this.host.lang = this.locale;
+    this.renderer.setHeaderLabel(this.t("toggleHeaderRow"));
+    if (!this.options.placeholder) {
+      this.renderer.setPlaceholder(this.t("placeholder"));
+      this.renderer.render(this.state.doc, this.state.selection);
+    } else {
+      this.renderer.render(this.state.doc, this.state.selection);
+    }
+    this.refreshToolbar();
+    this.refreshFindBar();
+    this.refreshStatusBar();
+    this.refreshAIPanel();
+  }
+
+  getMarkValue(type: "fontSize" | "fontFamily" | "color" | "background"): string | undefined {
+    const mark = this.getActiveMarks().find((item) => item.type === type);
+    return mark && "value" in mark ? mark.value : undefined;
+  }
+
+  getStats(): ReturnType<typeof documentStats> {
+    return documentStats(this.state.doc);
+  }
+
   destroy(): void {
     if (this.destroyed) {
       return;
@@ -515,6 +564,8 @@ export class OraEditor {
     this.destroyed = true;
     this.unbindInput();
     this.unbindToolbar?.();
+    this.unbindFind?.();
+    this.unbindStatus?.();
     this.unbindAI?.();
     this.plugins.destroy();
     this.renderer.destroy();

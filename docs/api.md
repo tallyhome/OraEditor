@@ -8,6 +8,8 @@ const editor = new OraEditor({
   toolbar?: boolean | HTMLElement,
   preset?: "simple" | "full",
   features?: { images?, tables?, media?, ai? },
+  locale?: "fr" | "en" | "ru" | "pt" | "es" | "it" | "de",
+  placeholder?: string,
   plugins?: OraPlugin[],
   uploadImage?: (file, ctx) => Promise<UploadedAsset>,
   openMediaLibrary?: (opts) => Promise<MediaItem[] | null>,
@@ -16,7 +18,9 @@ const editor = new OraEditor({
 ```
 
 `preset: "simple"` : images + texte, pas de tableaux / médias / IA.  
-`preset: "full"` (défaut) : tout le Core.
+`preset: "full"` (défaut) : tout le Core.  
+`locale` : toolbar, dialogs, recherche, compteur. Défaut = `<html lang>` (sinon `fr`).  
+`placeholder` : texte affiché tant que le document est vide.
 
 ## Instance
 
@@ -31,14 +35,20 @@ const editor = new OraEditor({
 | `exec(name, args?)` | Commandes |
 | `undo()` / `redo()` | Historique |
 | `toggleFullscreen()` | Plein écran |
+| `setLocale(locale)` | Traduit l’UI (FR/EN/RU/…) |
+| `t(key)` | Chaîne i18n |
+| `getStats()` | Mots / caractères |
+| `openFindBar()` | Rechercher / remplacer (`Ctrl+F`) |
 | `ui.addToolbarButton(spec)` | Bouton plugin |
 | `destroy()` | Nettoyage |
 
 ## Commandes utiles
 
-Texte : `insertText`, `toggleMark`, `setBlock`, `toggleList`, `setAlign`, `indent`, `setLink`  
+Texte : `insertText`, `toggleMark`, `setMark`, `removeMark`, `setBlock`, `toggleList`, `setAlign`, `indent`, `setLink`  
 Images / médias : `insertImage`, `insertVideo`, `insertAudio`, `insertEmbed`, `setNodeAttrs`  
-Tableaux : `insertTable`, `tableAddRow`, `tableAddColumn`, `tableDeleteRow`, `tableDeleteColumn`
+Tableaux : `insertTable`, `tableAddRow`, `tableAddColumn`, `tableDeleteRow`, `tableDeleteColumn`, `tableMergeRight`, `tableMergeDown`, `tableSplitCell`, `tableToggleHeaderRow`, `tableSetCellBackground`
+
+Raccourcis Markdown en saisie : `# ` `## ` `- ` `1. ` `> ` `**gras**`.
 
 ## Events
 

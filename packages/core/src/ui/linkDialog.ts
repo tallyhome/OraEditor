@@ -1,3 +1,5 @@
+import type { OraEditor } from "../api/OraEditor.js";
+
 export interface LinkDialogResult {
   href: string;
   target?: "_blank";
@@ -7,24 +9,26 @@ export interface LinkDialogResult {
 export function openLinkDialog(
   host: HTMLElement,
   initial?: { href?: string; target?: string },
+  editor?: OraEditor,
 ): Promise<LinkDialogResult | null> {
+  const t = (key: "linkTitle" | "url" | "openBlank" | "cancel" | "apply") => editor?.t(key) ?? fallback[key];
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "ora-dialog-overlay";
     overlay.innerHTML = `
       <form class="ora-dialog" role="dialog" aria-labelledby="ora-link-title">
-        <h2 id="ora-link-title">Lien</h2>
+        <h2 id="ora-link-title">${escapeText(t("linkTitle"))}</h2>
         <label>
-          URL
+          ${escapeText(t("url"))}
           <input name="href" type="url" required placeholder="https://" value="${escapeAttr(initial?.href ?? "")}">
         </label>
         <label class="ora-dialog-check">
           <input name="blank" type="checkbox" ${initial?.target === "_blank" ? "checked" : ""}>
-          Ouvrir dans un nouvel onglet
+          ${escapeText(t("openBlank"))}
         </label>
         <div class="ora-dialog-actions">
-          <button type="button" data-cancel>Annuler</button>
-          <button type="submit">Appliquer</button>
+          <button type="button" data-cancel>${escapeText(t("cancel"))}</button>
+          <button type="submit">${escapeText(t("apply"))}</button>
         </div>
       </form>
     `;
@@ -60,6 +64,18 @@ export function openLinkDialog(
   });
 }
 
+const fallback = {
+  linkTitle: "Lien",
+  url: "URL",
+  openBlank: "Ouvrir dans un nouvel onglet",
+  cancel: "Annuler",
+  apply: "Appliquer",
+};
+
 function escapeAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function escapeText(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }

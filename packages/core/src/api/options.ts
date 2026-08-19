@@ -23,6 +23,8 @@ export interface OraEditorOptions {
   toolbar?: boolean | HTMLElement;
   preset?: OraPreset;
   features?: Partial<OraFeatures>;
+  locale?: string;
+  placeholder?: string;
 }
 
 export function resolveFeatures(options: OraEditorOptions): OraFeatures {

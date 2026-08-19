@@ -201,4 +201,87 @@ describe("API OraEditor", () => {
     editor.destroy();
     expect(host.querySelector(".ora-toolbar")).toBeNull();
   });
+
+  it("traduit la toolbar et compte les mots", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host, toolbar: true, locale: "en" });
+    expect(host.querySelector("[data-cmd=undo]")?.getAttribute("title")).toContain("Undo");
+    editor.setLocale("ru");
+    expect(host.querySelector("[data-cmd=undo]")?.getAttribute("title")).toContain("Отменить");
+    editor.exec("insertText", { text: "Hello world" });
+    expect(editor.getStats().words).toBe(2);
+    editor.destroy();
+  });
+
+  it("applique taille, police et exposant", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host });
+    editor.exec("insertText", { text: "Texte" });
+    editor.exec("selectAll");
+    editor.exec("setMark", { mark: { type: "fontSize", value: "24px" } });
+    editor.exec("setMark", { mark: { type: "fontFamily", value: "Georgia, serif" } });
+    editor.exec("toggleMark", { mark: { type: "superscript" } });
+    const html = editor.getHTML();
+    expect(html).toContain("font-size: 24px");
+    expect(html).toContain("font-family: Georgia, serif");
+    expect(html).toContain("<sup>");
+    editor.destroy();
+  });
+
+  it("fusionne des cellules et pose un fond", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host, preset: "full" });
+    editor.setHTML("<table><tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr></table>");
+    editor.dispatch((tr) => tr.setSelection({
+      type: "text",
+      anchor: { path: [0, 0, 0, 0], offset: 1 },
+      focus: { path: [0, 0, 0, 0], offset: 1 },
+    }), { history: false });
+    editor.exec("tableMergeRight");
+    expect(editor.getHTML()).toContain("colspan=\"2\"");
+    expect(editor.getHTML()).toContain("AB");
+    editor.exec("tableSetCellBackground", { value: "#fde68a" });
+    expect(editor.getHTML()).toContain("background-color: #fde68a");
+    editor.exec("tableSplitCell");
+    expect(editor.getHTML()).not.toContain("colspan=");
+    editor.dispatch((tr) => tr.setSelection({
+      type: "text",
+      anchor: { path: [0, 0, 0, 0], offset: 0 },
+      focus: { path: [0, 0, 0, 0], offset: 0 },
+    }), { history: false });
+    editor.exec("tableToggleHeaderRow");
+    expect(editor.getHTML()).toContain("<th");
+    editor.destroy();
+  });
+
+  it("convertit les raccourcis Markdown", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host });
+    for (const char of "# ") {
+      editor.exec("insertText", { text: char });
+    }
+    expect(editor.getCurrentBlock().type).toBe("heading");
+    editor.exec("insertText", { text: "Titre" });
+    expect(editor.getHTML()).toContain("<h1>Titre</h1>");
+    editor.exec("splitBlock");
+    for (const char of "- ") {
+      editor.exec("insertText", { text: char });
+    }
+    expect(editor.getCurrentBlock().type).toBe("listItem");
+    editor.exec("splitBlock");
+    for (const char of "**ok**") {
+      editor.exec("insertText", { text: char });
+    }
+    expect(editor.getHTML()).toContain("<strong>ok</strong>");
+    editor.destroy();
+  });
+
+  it("affiche un placeholder sur un document vide", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host, placeholder: "Votre texte" });
+    const content = host.querySelector(".ora-content");
+    expect(content?.classList.contains("ora-is-empty")).toBe(true);
+    expect(content?.getAttribute("data-placeholder")).toBe("Votre texte");
+    editor.destroy();
+  });
 });

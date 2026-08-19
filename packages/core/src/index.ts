@@ -40,6 +40,8 @@ export {
 export { isSafeUrl, validateImageFile } from "./security/index.js";
 export { CommandRegistry } from "./commands/index.js";
 export { cleanPastedHtml, cleanWordHtml } from "./clipboard/index.js";
+export { resolveLocale, supportedLocales } from "./i18n/index.js";
+export type { OraLocale, OraMessageKey } from "./i18n/index.js";
 
 declare global {
   interface Window {

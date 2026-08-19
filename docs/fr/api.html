@@ -21,6 +21,8 @@
   editable: true,
   toolbar: true,               // ou un HTMLElement hôte
   preset: "full",              // "simple" | "full"
+  locale: "fr",                // fr, en, ru, pt, es, it, de (défaut : lang de la page)
+  placeholder: "Commencez à écrire…",
   features: { images, tables, media, ai },
   plugins: [],
   uploadImage: async (file, ctx) =&gt; ({ url, alt }),
@@ -41,6 +43,9 @@
           <tr><td><code>exec(name, args?)</code></td><td>Commandes</td></tr>
           <tr><td><code>undo()</code> / <code>redo()</code></td><td>Historique</td></tr>
           <tr><td><code>toggleFullscreen()</code></td><td>Plein écran</td></tr>
+          <tr><td><code>setLocale(locale)</code></td><td>Traduit toolbar, dialogs, recherche</td></tr>
+          <tr><td><code>getStats()</code></td><td>Compteur de mots / caractères</td></tr>
+          <tr><td><code>openFindBar()</code></td><td>Rechercher / remplacer (<code>Ctrl+F</code>)</td></tr>
           <tr><td><code>ui.addToolbarButton(spec)</code></td><td>Bouton plugin</td></tr>
           <tr><td><code>ai.register(provider)</code></td><td>Provider IA supplémentaire</td></tr>
           <tr><td><code>on(event, handler)</code></td><td>Abonnement</td></tr>
@@ -49,9 +54,10 @@
       </table>
 
       <h2>Commandes utiles</h2>
-      <p>Texte : <code>insertText</code>, <code>toggleMark</code>, <code>setMark</code>, <code>setBlock</code>, <code>toggleList</code>, <code>setAlign</code>, <code>indent</code>, <code>setLink</code>.</p>
+      <p>Texte : <code>insertText</code>, <code>toggleMark</code>, <code>setMark</code>, <code>removeMark</code>, <code>setBlock</code>, <code>toggleList</code>, <code>setAlign</code>, <code>indent</code>, <code>setLink</code>.</p>
       <p>Médias : <code>insertImage</code>, <code>insertVideo</code>, <code>insertAudio</code>, <code>insertEmbed</code>, <code>setNodeAttrs</code>.</p>
-      <p>Tableaux : <code>insertTable</code>, <code>tableAddRow</code>, <code>tableAddColumn</code>, <code>tableDeleteRow</code>, <code>tableDeleteColumn</code>.</p>
+      <p>Tableaux : <code>insertTable</code>, <code>tableAddRow</code>, <code>tableAddColumn</code>, <code>tableDeleteRow</code>, <code>tableDeleteColumn</code>, <code>tableMergeRight</code>, <code>tableMergeDown</code>, <code>tableSplitCell</code>, <code>tableToggleHeaderRow</code>, <code>tableSetCellBackground</code>.</p>
+      <p>Saisie Markdown : <code># </code>, <code>## </code>, <code>- </code>, <code>1. </code>, <code>&gt; </code>, <code>**gras**</code>.</p>
 
       <h2>Événements</h2>
       <p>

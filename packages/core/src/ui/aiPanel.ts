@@ -3,38 +3,54 @@ import type { AICapability } from "../ai/types.js";
 import { walkTextPaths, getNode, isText, textContent } from "../document/index.js";
 import { isTextSelection, selectionEdges } from "../selection/types.js";
 
-const LABELS: Record<AICapability, string> = {
-  correct: "Corriger",
-  rewrite: "Reformuler",
-  translate: "Traduire",
-  summarize: "Résumer",
-  expand: "Développer",
-  simplify: "Simplifier",
-  generate: "Générer",
+const AI_KEYS: Record<AICapability, "aiCorrect" | "aiRewrite" | "aiTranslate" | "aiSummarize" | "aiExpand" | "aiSimplify" | "aiGenerate"> = {
+  correct: "aiCorrect",
+  rewrite: "aiRewrite",
+  translate: "aiTranslate",
+  summarize: "aiSummarize",
+  expand: "aiExpand",
+  simplify: "aiSimplify",
+  generate: "aiGenerate",
 };
 
 export function mountAIPanel(editor: OraEditor, host: HTMLElement): () => void {
   const panel = document.createElement("div");
   panel.className = "ora-ai-panel";
-  panel.innerHTML = `
+  host.appendChild(panel);
+
+  const paint = () => {
+    panel.innerHTML = `
     <div class="ora-ai-head">
-      <strong>Assistant IA</strong>
-      <select data-provider aria-label="Fournisseur IA"></select>
+      <strong>${escapeText(editor.t("aiAssistant"))}</strong>
+      <select data-provider aria-label="${escapeAttr(editor.t("aiProvider"))}"></select>
     </div>
     <div class="ora-ai-ops"></div>
     <p class="ora-ai-note"></p>
   `;
-  host.appendChild(panel);
-  const select = panel.querySelector("select") as HTMLSelectElement;
-  const ops = panel.querySelector(".ora-ai-ops") as HTMLElement;
-  const note = panel.querySelector(".ora-ai-note") as HTMLElement;
+    bind();
+    refresh();
+  };
+
+  const bind = () => {
+    const select = panel.querySelector("select") as HTMLSelectElement;
+    select.addEventListener("change", () => {
+      editor.ai.activeId = select.value;
+      refresh();
+    });
+  };
 
   const refresh = () => {
+    const select = panel.querySelector("select") as HTMLSelectElement | null;
+    const ops = panel.querySelector(".ora-ai-ops") as HTMLElement | null;
+    const note = panel.querySelector(".ora-ai-note") as HTMLElement | null;
+    if (!select || !ops || !note) {
+      return;
+    }
     select.innerHTML = "";
     for (const provider of editor.ai.list()) {
       const option = document.createElement("option");
       option.value = provider.id;
-      option.textContent = provider.enabled === false ? `${provider.label} (bientôt)` : provider.label;
+      option.textContent = provider.enabled === false ? `${provider.label} ${editor.t("aiSoon")}` : provider.label;
       option.disabled = provider.enabled === false;
       if (editor.ai.activeId === provider.id) {
         option.selected = true;
@@ -43,10 +59,10 @@ export function mountAIPanel(editor: OraEditor, host: HTMLElement): () => void {
     }
     const active = editor.ai.active();
     ops.innerHTML = "";
-    (Object.keys(LABELS) as AICapability[]).forEach((op) => {
+    (Object.keys(AI_KEYS) as AICapability[]).forEach((op) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = LABELS[op];
+      button.textContent = editor.t(AI_KEYS[op]);
       button.disabled = !active || active.enabled === false || !active.capabilities.includes(op);
       button.addEventListener("click", () => {
         void editor.runAI(op);
@@ -54,19 +70,16 @@ export function mountAIPanel(editor: OraEditor, host: HTMLElement): () => void {
       ops.appendChild(button);
     });
     if (active?.locality === "oraai") {
-      note.textContent = "OraAI est prévu dans l’architecture mais n’est pas encore disponible.";
+      note.textContent = editor.t("aiNoteOra");
     } else if (active?.locality === "remote") {
-      note.textContent = "Cette opération peut envoyer du texte vers un service distant (via le proxy hôte).";
+      note.textContent = editor.t("aiNoteRemote");
     } else {
-      note.textContent = "Opération locale : le document reste dans cet environnement.";
+      note.textContent = editor.t("aiNoteLocal");
     }
   };
 
-  select.addEventListener("change", () => {
-    editor.ai.activeId = select.value;
-    refresh();
-  });
-  refresh();
+  paint();
+  editor.refreshAIPanel = paint;
   return () => panel.remove();
 }
 
@@ -81,18 +94,20 @@ export function extractAIFragments(editor: OraEditor, scope: "selection" | "bloc
   } else if (scope === "selection" && isTextSelection(selection)) {
     const { start, end } = selectionEdges(selection);
     selected = paths.filter((path) => {
-      const b = path[0] ?? 0;
-      return b >= (start.path[0] ?? 0) && b <= (end.path[0] ?? 0);
+      const a = path[0] ?? 0;
+      return a >= (start.path[0] ?? 0) && a <= (end.path[0] ?? 0);
     });
   }
-  return selected
-    .map((path) => {
-      const node = getNode(doc, path);
-      return isText(node) && node.text ? { path, text: node.text } : null;
-    })
-    .filter((item): item is { path: number[]; text: string } => item !== null);
+  return selected.map((path) => {
+    const node = getNode(doc, path);
+    return { path, text: isText(node) ? node.text : textContent(node) };
+  }).filter((item) => item.text.trim().length > 0);
 }
 
-export function documentPlainText(editor: OraEditor): string {
-  return textContent({ type: "doc", content: editor.getJSON().content });
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function escapeText(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }

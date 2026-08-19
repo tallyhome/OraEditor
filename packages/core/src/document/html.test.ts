@@ -72,4 +72,11 @@ describe("HTML converters", () => {
     expect(toHTML(doc)).toContain("<table>");
     expect(toHTML(doc)).toContain("<video");
   });
+
+  it("round-trip fusion de cellules et fond", () => {
+    const html = '<table><tr><td colspan="2" style="background-color: #fde68a">AB</td></tr></table>';
+    const out = toHTML(fromHTML(html));
+    expect(out).toContain("colspan=\"2\"");
+    expect(out).toContain("background-color: #fde68a");
+  });
 });

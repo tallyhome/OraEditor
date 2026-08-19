@@ -31,6 +31,7 @@
       element: "#editor",
       toolbar: true,
       preset: "full",
+      locale: document.documentElement.lang || "fr",
       content: "",
       uploadImage: async function (file) {
         const body = new FormData();

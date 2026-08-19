@@ -4,6 +4,7 @@ import { DOCUMENT_MODEL_VERSION } from "../version.js";
 import { migrateDocument } from "./migrations/index.js";
 import { normalizeMarks } from "./marks.js";
 import { Schema } from "./schema.js";
+import { isSafeCssColor } from "../security/css.js";
 
 const defaultSchema = Schema.createDefault();
 
@@ -111,8 +112,19 @@ function sanitizeAttrs(type: string, attrs: Record<string, unknown>): Record<str
       next.uploading = true;
     }
   }
-  if (type === "tableCell" && attrs.header === true) {
-    next.header = true;
+  if (type === "tableCell") {
+    if (attrs.header === true) {
+      next.header = true;
+    }
+    if (typeof attrs.colspan === "number" && attrs.colspan > 1) {
+      next.colspan = Math.min(20, Math.max(2, Math.round(attrs.colspan)));
+    }
+    if (typeof attrs.rowspan === "number" && attrs.rowspan > 1) {
+      next.rowspan = Math.min(50, Math.max(2, Math.round(attrs.rowspan)));
+    }
+    if (typeof attrs.background === "string" && isSafeCssColor(attrs.background)) {
+      next.background = attrs.background;
+    }
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
