@@ -58,11 +58,24 @@ function cleanElement(el: Element): void {
 }
 
 function stripJunkAttributes(el: Element): void {
-  const keep = new Set(["href", "src", "target", "rel", "style", "colspan", "rowspan", "align"]);
+  const keep = new Set(["href", "src", "target", "rel", "style", "colspan", "rowspan", "align", "id", "download", "data-mention"]);
   Array.from(el.attributes).forEach((attr) => {
     const name = attr.name.toLowerCase();
-    if (name.startsWith("on") || name.startsWith("xmlns") || name.startsWith("data-") || name === "class" || name === "id" || name === "lang") {
+    if (name.startsWith("on") || name.startsWith("xmlns") || name === "lang") {
       el.removeAttribute(attr.name);
+      return;
+    }
+    if (name.startsWith("data-") && name !== "data-mention") {
+      el.removeAttribute(attr.name);
+      return;
+    }
+    if (name === "class") {
+      const kept = attr.value.split(/\s+/).filter((item) => item.startsWith("ora-")).join(" ");
+      if (kept) {
+        el.setAttribute("class", kept);
+      } else {
+        el.removeAttribute("class");
+      }
       return;
     }
     if (!keep.has(name)) {

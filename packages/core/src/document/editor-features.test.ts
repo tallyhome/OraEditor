@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchBlockShortcut, matchBoldShortcut } from "./markdown.js";
+import { matchBlockShortcut, matchBoldShortcut, matchItalicShortcut } from "./markdown.js";
 import { buildTableGrid, cellColSpan, findOriginSlot } from "./table.js";
 import { documentStats, findMatches, isEmptyDocument, replaceInString } from "./search.js";
 import { createEmptyDocument } from "./types.js";
@@ -11,7 +11,10 @@ describe("Markdown shortcuts", () => {
     expect(matchBlockShortcut("### ")).toEqual({ kind: "heading", level: 3 });
     expect(matchBlockShortcut("- ")).toEqual({ kind: "list", ordered: false });
     expect(matchBlockShortcut("1. ")).toEqual({ kind: "list", ordered: true });
+    expect(matchBlockShortcut("---")).toEqual({ kind: "rule" });
     expect(matchBoldShortcut("**texte**")).toEqual({ from: 0, inner: "texte", raw: "**texte**" });
+    expect(matchItalicShortcut("*ok*")).toEqual({ from: 0, inner: "ok", raw: "*ok*" });
+    expect(matchItalicShortcut("**ok**")).toBeNull();
   });
 });
 

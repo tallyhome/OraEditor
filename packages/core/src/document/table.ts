@@ -135,6 +135,28 @@ export function emptyCellsForInsert(count: number, header = false): OraElement[]
   return Array.from({ length: Math.max(0, count) }, () => emptyCell(header));
 }
 
+export function cellVisualRect(
+  table: OraElement,
+  row: number,
+  col: number,
+): { visualRow: number; visualCol: number; colspan: number; rowspan: number } | null {
+  const grid = buildTableGrid(table);
+  const origin = findOriginSlot(grid, row, col);
+  if (!origin) {
+    return null;
+  }
+  const cell = (table.content?.[origin.row] as OraElement | undefined)?.content?.[origin.cell];
+  if (!cell || !isElement(cell)) {
+    return null;
+  }
+  return {
+    visualRow: origin.visualRow,
+    visualCol: origin.visualCol,
+    colspan: cellColSpan(cell),
+    rowspan: cellRowSpan(cell),
+  };
+}
+
 export function originInsertIndex(grid: (TableGridSlot | null)[][], row: number, visualCol: number): number {
   const seen = new Set<string>();
   let index = 0;

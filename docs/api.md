@@ -10,8 +10,11 @@ const editor = new OraEditor({
   features?: { images?, tables?, media?, ai? },
   locale?: "fr" | "en" | "ru" | "pt" | "es" | "it" | "de",
   placeholder?: string,
+  theme?: "light" | "dark" | "auto",
+  mentions?: (query) => string[] | Promise<string[]>,
   plugins?: OraPlugin[],
   uploadImage?: (file, ctx) => Promise<UploadedAsset>,
+  uploadFile?: (file, ctx) => Promise<UploadedAsset>,
   openMediaLibrary?: (opts) => Promise<MediaItem[] | null>,
   aiProxyUrl?: string,
 });
@@ -20,6 +23,8 @@ const editor = new OraEditor({
 `preset: "simple"` : images + texte, pas de tableaux / médias / IA.  
 `preset: "full"` (défaut) : tout le Core.  
 `locale` : toolbar, dialogs, recherche, compteur. Défaut = `<html lang>` (sinon `fr`).  
+`theme` : `light` / `dark` / `auto`.  
+`mentions(query)` : suggestions `@` (sinon conversion `@nom` + espace).  
 `placeholder` : texte affiché tant que le document est vide.
 
 ## Instance
@@ -30,6 +35,8 @@ const editor = new OraEditor({
 | `getHTML()` / `setHTML(html)` | HTML subset sanitisé |
 | `insertHTML(html)` | Fragment nettoyé (Word/Docs) |
 | `insertImageFile(file)` | Upload + nœud `image` |
+| `insertFileFile(file)` | Upload + nœud `file` (PDF, etc.) |
+| `toggleTheme()` | Mode sombre |
 | `openLibrary(type)` | Médiathèque hôte |
 | `runAI(op)` | Assistant IA (patches de texte) |
 | `exec(name, args?)` | Commandes |
@@ -44,16 +51,16 @@ const editor = new OraEditor({
 
 ## Commandes utiles
 
-Texte : `insertText`, `toggleMark`, `setMark`, `removeMark`, `setBlock`, `toggleList`, `setAlign`, `indent`, `setLink`  
-Images / médias : `insertImage`, `insertVideo`, `insertAudio`, `insertEmbed`, `setNodeAttrs`  
-Tableaux : `insertTable`, `tableAddRow`, `tableAddColumn`, `tableDeleteRow`, `tableDeleteColumn`, `tableMergeRight`, `tableMergeDown`, `tableSplitCell`, `tableToggleHeaderRow`, `tableSetCellBackground`
+Texte : `insertText`, `toggleMark`, `setMark`, `removeMark`, `setBlock`, `toggleList`, `setAlign`, `indent`, `setLink`, `insertMention`  
+Images / médias : `insertImage`, `insertVideo`, `insertAudio`, `insertEmbed`, `insertFile`, `insertHorizontalRule`, `insertToc`, `setAnchor`, `setNodeAttrs`  
+Tableaux : `insertTable`, `tableAddRow`, `tableAddColumn`, `tableDeleteRow`, `tableDeleteColumn`, `tableMergeRight`, `tableMergeDown`, `tableMergeSelection`, `tableSplitCell`, `tableToggleHeaderRow`, `tableSetCellBackground`
 
-Raccourcis Markdown en saisie : `# ` `## ` `- ` `1. ` `> ` `**gras**`.
+Raccourcis Markdown en saisie : `# ` `## ` `- ` `1. ` `> ` `---` `**gras**` `*italique*`.
 
 ## Events
 
 `ready`, `change`, `focus`, `blur`, `selectionChange`, `destroy`, `pluginLoaded`,  
-`imageUploadStart` / `Success` / `Error`, `aiRequestStart` / `Success` / `Error`.
+`imageUploadStart` / `Success` / `Error`, `fileUploadStart` / `Success` / `Error`, `mentionQuery`, `aiRequestStart` / `Success` / `Error`.
 
 ## Plugins
 

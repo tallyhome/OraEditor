@@ -34,3 +34,4 @@ editor.on("change", refresh);
 editor.on("selectionChange", refresh);
 editor.on("ready", refresh);
 refresh();
+document.documentElement.classList.remove("ora-booting");

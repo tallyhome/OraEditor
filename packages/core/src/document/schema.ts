@@ -51,6 +51,9 @@ export class Schema {
     schema.registerBlock({ type: "video", content: "none" });
     schema.registerBlock({ type: "audio", content: "none" });
     schema.registerBlock({ type: "embed", content: "none" });
+    schema.registerBlock({ type: "horizontalRule", content: "none" });
+    schema.registerBlock({ type: "file", content: "none" });
+    schema.registerBlock({ type: "toc", content: "none" });
     schema.registerBlock({ type: "table", content: "table" });
     schema.registerBlock({ type: "tableRow", content: "table" });
     schema.registerBlock({ type: "tableCell", content: "inline*" });
@@ -66,6 +69,7 @@ export class Schema {
       "background",
       "fontSize",
       "fontFamily",
+      "mention",
       "link",
     ] as const) {
       schema.registerMark({ type });

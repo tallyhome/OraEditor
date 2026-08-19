@@ -2,7 +2,7 @@ import type { OraElement, OraNode } from "./types.js";
 import { isElement } from "./types.js";
 import { isTextBlockType } from "./schema.js";
 
-export const ATOMIC_BLOCK_TYPES = ["image", "video", "audio", "embed"] as const;
+export const ATOMIC_BLOCK_TYPES = ["image", "video", "audio", "embed", "horizontalRule", "file", "toc"] as const;
 export type AtomicBlockType = (typeof ATOMIC_BLOCK_TYPES)[number];
 
 export function isTextBlock(node: OraNode): node is OraElement & { type: string } {

@@ -7,6 +7,8 @@ import { blockAlign, blockIndent, blockLineHeight, headingLevel, listLevel, list
 import { isListItem } from "./blocks.js";
 import { normalizeMarks } from "./marks.js";
 import { cellBackground, cellColSpan, cellRowSpan } from "./table.js";
+import { isSafeAnchorId, slugifyAnchor } from "./anchor.js";
+import { textContent } from "./node.js";
 
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "OBJECT", "EMBED", "LINK", "META"]);
 
@@ -27,6 +29,11 @@ function blocksToHTML(blocks: OraNode[]): string {
       const run = collectListRun(blocks, index);
       html += listRunToHTML(run);
       index += run.length;
+      continue;
+    }
+    if (isElement(block) && block.type === "toc") {
+      html += tocToHTML(blocks);
+      index += 1;
       continue;
     }
     html += nodeToHTML(block);
@@ -108,19 +115,20 @@ function nodeToHTML(node: OraNode): string {
   if (isText(node)) {
     return wrapMarks(escapeText(node.text), node.marks);
   }
+  const extra = extraAttrs(node);
   const style = blockStyleAttr(node);
   if (node.type === "heading") {
     const level = headingLevel(node);
-    return `<h${level}${style}>${childrenToHTML(node)}</h${level}>`;
+    return `<h${level}${extra}${style}>${childrenToHTML(node)}</h${level}>`;
   }
   if (node.type === "blockquote") {
-    return `<blockquote${style}>${childrenToHTML(node)}</blockquote>`;
+    return `<blockquote${extra}${style}>${childrenToHTML(node)}</blockquote>`;
   }
   if (node.type === "codeBlock") {
-    return `<pre${style}><code>${childrenToHTML(node)}</code></pre>`;
+    return `<pre${extra}${style}><code>${childrenToHTML(node)}</code></pre>`;
   }
   if (node.type === "listItem") {
-    return `<li${style}>${childrenToHTML(node)}</li>`;
+    return `<li${extra}${style}>${childrenToHTML(node)}</li>`;
   }
   if (node.type === "image") {
     return imageToHTML(node);
@@ -140,7 +148,52 @@ function nodeToHTML(node: OraNode): string {
   if (node.type === "table") {
     return tableToHTML(node);
   }
-  return `<p${style}>${childrenToHTML(node)}</p>`;
+  if (node.type === "horizontalRule") {
+    return "<hr>";
+  }
+  if (node.type === "file") {
+    return fileToHTML(node);
+  }
+  return `<p${extra}${style}>${childrenToHTML(node)}</p>`;
+}
+
+function extraAttrs(node: OraElement): string {
+  const stored = typeof node.attrs?.id === "string" ? node.attrs.id : "";
+  return stored && isSafeAnchorId(stored) ? ` id="${escapeAttr(stored)}"` : "";
+}
+
+function headingAnchorId(node: OraElement): string {
+  const stored = typeof node.attrs?.id === "string" ? node.attrs.id : "";
+  if (stored && isSafeAnchorId(stored)) {
+    return stored;
+  }
+  if (node.type === "heading") {
+    return slugifyAnchor(textContent(node));
+  }
+  return "";
+}
+
+function fileToHTML(node: OraElement): string {
+  const src = String(node.attrs?.src ?? "");
+  if (!isSafeUrl(src)) {
+    return "";
+  }
+  const title = escapeText(String(node.attrs?.title ?? node.attrs?.filename ?? src));
+  const filename = typeof node.attrs?.filename === "string" ? ` download="${escapeAttr(node.attrs.filename)}"` : " download";
+  return `<a class="ora-file" href="${escapeAttr(src)}"${filename}>${title}</a>`;
+}
+
+function tocToHTML(blocks: OraNode[]): string {
+  const items = blocks
+    .filter(isElement)
+    .filter((block) => block.type === "heading")
+    .map((block) => {
+      const text = textContent(block).trim() || "…";
+      const id = headingAnchorId(block);
+      return `<li><a href="#${escapeAttr(id)}">${escapeText(text)}</a></li>`;
+    })
+    .join("");
+  return `<nav class="ora-toc"><ol>${items}</ol></nav>`;
 }
 
 function imageToHTML(node: OraElement): string {
@@ -248,6 +301,8 @@ function wrapMark(inner: string, mark: OraMark): string {
       return isSafeFontSize(mark.value) ? `<span style="font-size: ${mark.value}">${inner}</span>` : inner;
     case "fontFamily":
       return isSafeFontFamily(mark.value) ? `<span style="font-family: ${mark.value}">${inner}</span>` : inner;
+    case "mention":
+      return `<span class="ora-mention" data-mention="${escapeAttr(mark.value)}">${inner}</span>`;
     case "link": {
       if (!isSafeUrl(mark.href)) {
         return inner;
@@ -330,9 +385,29 @@ function parseBlocks(root: ParentNode, out: OraNode[], listLevelValue: number): 
       }
       return;
     }
-    if (tag === "TABLE") {
+    if (tag === "HR") {
       flush();
-      out.push(tableFromElement(el));
+      out.push({ type: "horizontalRule" });
+      return;
+    }
+    if (tag === "NAV" && el.classList.contains("ora-toc")) {
+      flush();
+      out.push({ type: "toc" });
+      return;
+    }
+    if (tag === "A" && (el.classList.contains("ora-file") || el.hasAttribute("download"))) {
+      flush();
+      const src = el.getAttribute("href") ?? "";
+      if (isSafeUrl(src)) {
+        out.push({
+          type: "file",
+          attrs: {
+            src,
+            title: el.textContent?.trim() || src,
+            filename: el.getAttribute("download") || undefined,
+          },
+        });
+      }
       return;
     }
     if (tag === "VIDEO" || tag === "AUDIO") {
@@ -350,6 +425,11 @@ function parseBlocks(root: ParentNode, out: OraNode[], listLevelValue: number): 
       if (src && isSafeEmbedUrl(src)) {
         out.push({ type: "embed", attrs: { src } });
       }
+      return;
+    }
+    if (tag === "TABLE") {
+      flush();
+      out.push(tableFromElement(el));
       return;
     }
     if (tag === "UL" || tag === "OL") {
@@ -374,7 +454,7 @@ function parseBlocks(root: ParentNode, out: OraNode[], listLevelValue: number): 
       const content = mergeInlines(parseInlines(el, []));
       out.push(elementWithAttrs(
         "heading",
-        { level: Number.isFinite(level) ? Math.min(6, Math.max(1, level)) : 1, ...styleAttrs(el) },
+        { level: Number.isFinite(level) ? Math.min(6, Math.max(1, level)) : 1, ...styleAttrs(el), ...idFromElement(el) },
         content.length ? content : [{ type: "text", text: "" }],
       ));
       return;
@@ -445,7 +525,13 @@ function styleAttrs(el: Element): Record<string, unknown> {
   if (lineHeight) {
     attrs.lineHeight = lineHeight;
   }
+  Object.assign(attrs, idFromElement(el));
   return attrs;
+}
+
+function idFromElement(el: Element): Record<string, unknown> {
+  const id = el.getAttribute("id") ?? "";
+  return id && isSafeAnchorId(id) ? { id } : {};
 }
 
 function elementWithAttrs(type: string, attrs: Record<string, unknown>, content: OraNode[]): OraElement {
@@ -515,6 +601,12 @@ function marksFromElement(el: Element): OraMark[] {
   }
   if (tag === "SUP") {
     marks.push({ type: "superscript" });
+  }
+  if (el.classList.contains("ora-mention")) {
+    const value = (el.getAttribute("data-mention") ?? el.textContent ?? "").replace(/^@/, "").trim();
+    if (value) {
+      marks.push({ type: "mention", value: value.slice(0, 80) });
+    }
   }
   if (tag === "A") {
     const href = el.getAttribute("href") ?? "";

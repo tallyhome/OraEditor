@@ -17,6 +17,7 @@ export type OraMark =
   | { type: "background"; value: string }
   | { type: "fontSize"; value: string }
   | { type: "fontFamily"; value: string }
+  | { type: "mention"; value: string }
   | { type: "link"; href: string; target?: string; rel?: string[] };
 
 export interface OraText {

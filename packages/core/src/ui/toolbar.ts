@@ -2,12 +2,15 @@ import type { OraEditor } from "../api/OraEditor.js";
 import type { OraFeatures } from "../api/options.js";
 import { listOrdered } from "../document/schema.js";
 import type { OraMark } from "../document/types.js";
-import type { Selection } from "../selection/types.js";
+import type { Selection, TextSelection } from "../selection/types.js";
+import { isCollapsed, isTextSelection } from "../selection/types.js";
+import type { Transform } from "../transaction/transform.js";
 import { isSafeUrl } from "../security/urls.js";
 import { isSafeEmbedUrl, youtubeToEmbed } from "../security/embed.js";
 import { currentTableCell } from "../document/search.js";
 import { openLinkDialog } from "./linkDialog.js";
 import { openPromptDialog } from "./promptDialog.js";
+import { EMOJI_LIST } from "./emoji.js";
 
 const FONT_FAMILIES = [
   { value: "Georgia, serif", label: "Georgia" },
@@ -18,6 +21,39 @@ const FONT_FAMILIES = [
 ];
 
 const FONT_SIZES = ["", "12px", "14px", "16px", "18px", "24px", "32px", "48px"];
+
+function applyFontMark(
+  editor: OraEditor,
+  selection: Selection | null,
+  lastRange: TextSelection | null,
+  type: "fontFamily" | "fontSize",
+  value: string,
+): void {
+  const mark = value ? ({ type, value } as OraMark) : null;
+  const target = resolveFormatSelection(editor, selection, lastRange);
+  editor.dispatch((tr) => {
+    tr.setSelection(target);
+    return mark ? tr.applyMark(mark) : tr.removeMark(type);
+  }, { kind: "format" });
+}
+
+function resolveFormatSelection(
+  editor: OraEditor,
+  saved: Selection | null,
+  lastRange: TextSelection | null,
+): Selection {
+  if (saved && isTextSelection(saved) && !isCollapsed(saved)) {
+    return saved;
+  }
+  const current = editor.getSelection();
+  if (isTextSelection(current) && !isCollapsed(current)) {
+    return current;
+  }
+  if (lastRange) {
+    return lastRange;
+  }
+  return saved ?? current;
+}
 
 export function mountToolbar(editor: OraEditor, host: HTMLElement, features: OraFeatures): () => void {
   const bar = document.createElement("div");
@@ -31,11 +67,24 @@ export function mountToolbar(editor: OraEditor, host: HTMLElement, features: Ora
   host.insertBefore(bar, host.firstChild);
 
   let savedSelection: Selection | null = null;
+  let lastRange: TextSelection | null = null;
+
+  const rememberRange = (sel: Selection) => {
+    if (isTextSelection(sel) && !isCollapsed(sel)) {
+      lastRange = structuredClone(sel);
+    }
+  };
+
+  const captureToolbarSelection = () => {
+    const sel = editor.getSelection();
+    rememberRange(sel);
+    savedSelection = lastRange ? structuredClone(lastRange) : structuredClone(sel);
+  };
 
   const onMouseDown = (event: Event) => {
     const target = event.target as HTMLElement;
-    if (target.closest("input[type=color], select")) {
-      savedSelection = structuredClone(editor.getSelection());
+    if (target.closest("input[type=color], select, input[type=number]")) {
+      captureToolbarSelection();
       return;
     }
     if (target.closest("button, select")) {
@@ -47,6 +96,11 @@ export function mountToolbar(editor: OraEditor, host: HTMLElement, features: Ora
     if (savedSelection) {
       editor.dispatch((tr) => tr.setSelection(savedSelection as Selection), { history: false });
     }
+  };
+
+  const applyWithSelection = (mutate: (tr: Transform) => Transform) => {
+    const selection = resolveFormatSelection(editor, savedSelection, lastRange);
+    editor.dispatch((tr) => mutate(tr.setSelection(selection)), { kind: "format" });
   };
 
   const onClick = async (event: Event) => {
@@ -69,6 +123,9 @@ export function mountToolbar(editor: OraEditor, host: HTMLElement, features: Ora
       editor.exec("toggleList", { ordered: false });
     } else if (list === "ordered") {
       editor.exec("toggleList", { ordered: true });
+    } else if (button.dataset.emoji) {
+      editor.exec("insertText", { text: button.dataset.emoji });
+      bar.querySelector(".ora-emoji-picker")?.setAttribute("hidden", "");
     } else if (cmd === "paragraph") {
       editor.exec("setBlock", { type: "paragraph", attrs: {} });
     } else if (cmd === "blockquote") {
@@ -105,6 +162,8 @@ export function mountToolbar(editor: OraEditor, host: HTMLElement, features: Ora
       editor.exec("tableMergeRight");
     } else if (cmd === "tableMergeDown") {
       editor.exec("tableMergeDown");
+    } else if (cmd === "tableMergeSelection") {
+      editor.exec("tableMergeSelection");
     } else if (cmd === "tableSplit") {
       editor.exec("tableSplitCell");
     } else if (cmd === "tableHeader") {
@@ -115,16 +174,33 @@ export function mountToolbar(editor: OraEditor, host: HTMLElement, features: Ora
       await handleMedia(editor, "audio");
     } else if (cmd === "embed") {
       await handleEmbed(editor);
+    } else if (cmd === "horizontalRule") {
+      editor.exec("insertHorizontalRule");
+    } else if (cmd === "anchor") {
+      await handleAnchor(editor);
+    } else if (cmd === "file") {
+      await handleFile(editor);
+    } else if (cmd === "toc") {
+      editor.exec("insertToc");
+    } else if (cmd === "emoji") {
+      bar.querySelector(".ora-emoji-picker")?.toggleAttribute("hidden");
+      return;
+    } else if (cmd === "more") {
+      bar.querySelector(".ora-toolbar-menu")?.toggleAttribute("hidden");
+      return;
+    } else if (cmd === "dark") {
+      editor.toggleTheme();
     } else if (cmd === "color" || cmd === "background" || cmd === "cellBackground") {
       return;
     }
+    closeOverflow(bar);
     editor.focus();
     syncToolbar(editor, bar);
   };
 
   const applyColorMark = (type: "color" | "background", value: string) => {
     const mark: OraMark = { type, value };
-    const selection = savedSelection;
+    const selection = resolveFormatSelection(editor, savedSelection, lastRange);
     if (selection) {
       editor.dispatch((tr) => tr.setSelection(selection).applyMark(mark), { kind: "format" });
     } else {
@@ -144,42 +220,57 @@ export function mountToolbar(editor: OraEditor, host: HTMLElement, features: Ora
       editor.focus();
     }
     if (input instanceof HTMLSelectElement && input.dataset.cmd === "lineHeight") {
-      editor.exec("setLineHeight", { value: input.value });
+      applyWithSelection((tr) => tr.setLineHeight(input.value));
       editor.focus();
     }
     if (input instanceof HTMLSelectElement && input.dataset.cmd === "fontFamily") {
-      restoreSelection();
-      if (!input.value) {
-        editor.exec("removeMark", { type: "fontFamily" });
-      } else {
-        editor.exec("setMark", { mark: { type: "fontFamily", value: input.value } });
-      }
+      applyFontMark(editor, savedSelection, lastRange, "fontFamily", input.value);
       editor.focus();
     }
     if (input instanceof HTMLSelectElement && input.dataset.cmd === "fontSize") {
-      restoreSelection();
-      if (!input.value) {
-        editor.exec("removeMark", { type: "fontSize" });
-      } else {
-        editor.exec("setMark", { mark: { type: "fontSize", value: input.value } });
+      applyFontMark(editor, savedSelection, lastRange, "fontSize", input.value);
+      editor.focus();
+    }
+    if (input instanceof HTMLInputElement && input.dataset.cmd === "fontSizeCustom") {
+      const n = Math.min(96, Math.max(8, Math.round(Number(input.value))));
+      if (Number.isFinite(n)) {
+        applyFontMark(editor, savedSelection, lastRange, "fontSize", `${n}px`);
       }
       editor.focus();
     }
     syncToolbar(editor, bar);
   };
 
-  const refresh = () => syncToolbar(editor, bar);
+  const refresh = () => {
+    rememberRange(editor.getSelection());
+    syncToolbar(editor, bar);
+  };
   bar.addEventListener("mousedown", onMouseDown);
   bar.addEventListener("click", onClick);
   bar.addEventListener("change", onChange);
   const offChange = editor.on("change", refresh);
   const offSel = editor.on("selectionChange", refresh);
+  const contentEl = editor.hostElement.querySelector(".ora-content");
+  const onContentDown = () => {
+    lastRange = null;
+  };
+  contentEl?.addEventListener("mousedown", onContentDown);
+  const onDocClick = (event: Event) => {
+    const target = event.target as Node | null;
+    if (!target || bar.contains(target) || target instanceof HTMLOptionElement) {
+      return;
+    }
+    closeOverflow(bar);
+  };
+  document.addEventListener("click", onDocClick);
   refresh();
   editor.refreshToolbar = paint;
 
   return () => {
     offChange();
     offSel();
+    contentEl?.removeEventListener("mousedown", onContentDown);
+    document.removeEventListener("click", onDocClick);
     bar.removeEventListener("mousedown", onMouseDown);
     bar.removeEventListener("click", onClick);
     bar.removeEventListener("change", onChange);
@@ -238,6 +329,28 @@ async function handleEmbed(editor: OraEditor): Promise<void> {
   }
 }
 
+async function handleFile(editor: OraEditor): Promise<void> {
+  const file = await pickFile(".pdf,.txt,.csv,.zip,.doc,.docx,.odt,.rtf,.xls,.xlsx,application/pdf");
+  if (file) {
+    await editor.insertFileFile(file);
+  }
+}
+
+async function handleAnchor(editor: OraEditor): Promise<void> {
+  const current = typeof editor.getCurrentBlock().attrs?.id === "string" ? editor.getCurrentBlock().attrs?.id : "";
+  const result = await openPromptDialog(editor.hostElement, editor.t("anchor"), [
+    { name: "id", label: editor.t("anchorId"), value: String(current ?? ""), placeholder: "section" },
+  ], editor);
+  if (result) {
+    editor.exec("setAnchor", { id: result.id });
+  }
+}
+
+function closeOverflow(bar: HTMLElement): void {
+  bar.querySelector(".ora-toolbar-menu")?.setAttribute("hidden", "");
+  bar.querySelector(".ora-emoji-picker")?.setAttribute("hidden", "");
+}
+
 function pickFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
@@ -291,6 +404,9 @@ function syncToolbar(editor: OraEditor, bar: HTMLElement): void {
     if (cmd === "fullscreen" && editor.isFullscreen()) {
       button.classList.add("is-active");
     }
+    if (cmd === "dark" && editor.isDark()) {
+      button.classList.add("is-active");
+    }
     if (cmd === "tableHeader" && inTable) {
       const cell = currentTableCell(editor.getJSON(), path);
       if (cell?.attrs?.header === true) {
@@ -302,11 +418,16 @@ function syncToolbar(editor: OraEditor, bar: HTMLElement): void {
   const size = editor.getMarkValue("fontSize") ?? "";
   const familySelect = bar.querySelector<HTMLSelectElement>("select[data-cmd=fontFamily]");
   const sizeSelect = bar.querySelector<HTMLSelectElement>("select[data-cmd=fontSize]");
-  if (familySelect) {
+  if (familySelect && document.activeElement !== familySelect) {
     familySelect.value = FONT_FAMILIES.some((item) => item.value === family) ? family : "";
   }
-  if (sizeSelect) {
+  if (sizeSelect && document.activeElement !== sizeSelect) {
     sizeSelect.value = FONT_SIZES.includes(size) ? size : "";
+  }
+  const custom = bar.querySelector<HTMLInputElement>("input[data-cmd=fontSizeCustom]");
+  if (custom && document.activeElement !== custom) {
+    const n = Number.parseInt(size, 10);
+    custom.value = Number.isFinite(n) ? String(n) : "";
   }
 }
 
@@ -319,16 +440,14 @@ function toolbarHtml(editor: OraEditor, features: OraFeatures): string {
   const sizes = FONT_SIZES.map((item) =>
     `<option value="${escapeAttr(item)}">${item ? escapeText(item.replace("px", "")) : escapeText(editor.t("fontDefault"))}</option>`,
   ).join("");
+  const emojis = EMOJI_LIST.map((item) => `<button type="button" data-emoji="${item}" title="${item}">${item}</button>`).join("");
   const image = features.images
-    ? `<span class="ora-toolbar-sep"></span>
-    <button type="button" data-cmd="image" title="${t("image")}">🖼</button>
-    <button type="button" data-cmd="library" title="${t("library")}">🗂</button>`
+    ? `<button type="button" data-cmd="library" title="${t("library")}">🗂</button>`
     : "";
-  const table = features.tables
-    ? `<span class="ora-toolbar-sep"></span>
-    <button type="button" data-cmd="table" title="${t("table")}">▦</button>
-    <button type="button" data-cmd="tableAddRow" title="${t("tableAddRow")}">＋↕</button>
+  const tableExtras = features.tables
+    ? `<button type="button" data-cmd="tableAddRow" title="${t("tableAddRow")}">＋↕</button>
     <button type="button" data-cmd="tableAddCol" title="${t("tableAddCol")}">＋↔</button>
+    <button type="button" data-cmd="tableMergeSelection" title="${t("mergeCells")}">⧉</button>
     <button type="button" data-cmd="tableMergeRight" title="${t("tableMergeRight")}">⧉→</button>
     <button type="button" data-cmd="tableMergeDown" title="${t("tableMergeDown")}">⧉↓</button>
     <button type="button" data-cmd="tableSplit" title="${t("tableSplit")}">⊞</button>
@@ -338,62 +457,74 @@ function toolbarHtml(editor: OraEditor, features: OraFeatures): string {
     </label>`
     : "";
   const media = features.media
-    ? `<span class="ora-toolbar-sep"></span>
-    <button type="button" data-cmd="video" title="${t("video")}">▶</button>
+    ? `<button type="button" data-cmd="video" title="${t("video")}">▶</button>
     <button type="button" data-cmd="audio" title="${t("audio")}">♪</button>
     <button type="button" data-cmd="embed" title="${t("embed")}">⧉</button>`
     : "";
   return `
-    <button type="button" data-cmd="undo" title="${t("undo")}">↺</button>
-    <button type="button" data-cmd="redo" title="${t("redo")}">↻</button>
-    <span class="ora-toolbar-sep"></span>
-    <button type="button" data-cmd="paragraph" title="${t("paragraph")}">P</button>
-    <button type="button" data-heading="1" title="${t("h1")}">H1</button>
-    <button type="button" data-heading="2" title="${t("h2")}">H2</button>
-    <button type="button" data-heading="3" title="${t("h3")}">H3</button>
-    <span class="ora-toolbar-sep"></span>
-    <button type="button" data-mark="bold" title="${t("bold")}"><strong>G</strong></button>
-    <button type="button" data-mark="italic" title="${t("italic")}"><em>I</em></button>
-    <button type="button" data-mark="underline" title="${t("underline")}"><u>S</u></button>
-    <button type="button" data-mark="strike" title="${t("strike")}"><s>B</s></button>
-    <button type="button" data-mark="code" title="${t("code")}">\`</button>
-    <button type="button" data-mark="superscript" title="${t("superscript")}">x²</button>
-    <button type="button" data-mark="subscript" title="${t("subscript")}">x₂</button>
-    <select data-cmd="fontFamily" title="${t("fontFamily")}" aria-label="${t("fontFamily")}">${fonts}</select>
-    <select data-cmd="fontSize" title="${t("fontSize")}" aria-label="${t("fontSize")}">${sizes}</select>
-    <label class="ora-toolbar-color" title="${t("color")}">
-      <input type="color" data-cmd="color" value="#1c1917" aria-label="${t("color")}">
-    </label>
-    <label class="ora-toolbar-color" title="${t("highlight")}">
-      <input type="color" data-cmd="background" value="#fde68a" aria-label="${t("highlight")}">
-    </label>
-    <span class="ora-toolbar-sep"></span>
-    <button type="button" data-list="bullet" title="${t("bulletList")}">•</button>
-    <button type="button" data-list="ordered" title="${t("orderedList")}">1.</button>
-    <button type="button" data-cmd="outdent" title="${t("outdent")}">⇤</button>
-    <button type="button" data-cmd="indent" title="${t("indent")}">⇥</button>
-    <span class="ora-toolbar-sep"></span>
-    <button type="button" data-align="left" title="${t("alignLeft")}">⬅</button>
-    <button type="button" data-align="center" title="${t("alignCenter")}">⬌</button>
-    <button type="button" data-align="right" title="${t("alignRight")}">➡</button>
-    <button type="button" data-align="justify" title="${t("alignJustify")}">☰</button>
-    <select data-cmd="lineHeight" title="${t("lineHeight")}" aria-label="${t("lineHeight")}">
-      <option value="1">1</option>
-      <option value="1.15">1.15</option>
-      <option value="1.5" selected>1.5</option>
-      <option value="1.65">1.65</option>
-      <option value="2">2</option>
-    </select>
-    <span class="ora-toolbar-sep"></span>
-    <button type="button" data-cmd="link" title="${t("link")}">🔗</button>
-    <button type="button" data-cmd="unlink" title="${t("unlink")}">⛓️‍💥</button>
-    <button type="button" data-cmd="blockquote" title="${t("blockquote")}">“</button>
-    <button type="button" data-cmd="codeBlock" title="${t("codeBlock")}">{ }</button>
-    ${image}
-    ${table}
-    ${media}
-    <span class="ora-toolbar-sep"></span>
-    <button type="button" data-cmd="find" title="${t("find")}">⌕</button>
+    <div class="ora-toolbar-primary">
+      <button type="button" data-cmd="undo" title="${t("undo")}">↺</button>
+      <button type="button" data-cmd="redo" title="${t("redo")}">↻</button>
+      <span class="ora-toolbar-sep"></span>
+      <button type="button" data-cmd="paragraph" title="${t("paragraph")}">P</button>
+      <button type="button" data-heading="1" title="${t("h1")}">H1</button>
+      <button type="button" data-heading="2" title="${t("h2")}">H2</button>
+      <button type="button" data-heading="3" title="${t("h3")}">H3</button>
+      <span class="ora-toolbar-sep"></span>
+      <button type="button" data-mark="bold" title="${t("bold")}"><strong>G</strong></button>
+      <button type="button" data-mark="italic" title="${t("italic")}"><em>I</em></button>
+      <select data-cmd="fontFamily" title="${t("fontFamily")}" aria-label="${t("fontFamily")}">${fonts}</select>
+      <select data-cmd="fontSize" title="${t("fontSize")}" aria-label="${t("fontSize")}">${sizes}</select>
+      <input type="number" data-cmd="fontSizeCustom" min="8" max="96" step="1" placeholder="px" title="${t("fontSizeCustom")}" aria-label="${t("fontSizeCustom")}">
+      <button type="button" data-list="bullet" title="${t("bulletList")}">•</button>
+      <button type="button" data-list="ordered" title="${t("orderedList")}">1.</button>
+      <button type="button" data-cmd="link" title="${t("link")}">🔗</button>
+      ${features.images ? `<button type="button" data-cmd="image" title="${t("image")}">🖼</button>` : ""}
+      ${features.tables ? `<button type="button" data-cmd="table" title="${t("table")}">▦</button>` : ""}
+      <button type="button" data-cmd="find" title="${t("find")}">⌕</button>
+    </div>
+    <div class="ora-toolbar-overflow">
+      <button type="button" data-cmd="more" class="ora-toolbar-more-btn" title="${t("more")}">…</button>
+      <div class="ora-toolbar-menu" hidden>
+        <button type="button" data-mark="underline" title="${t("underline")}"><u>S</u></button>
+        <button type="button" data-mark="strike" title="${t("strike")}"><s>B</s></button>
+        <button type="button" data-mark="code" title="${t("code")}">\`</button>
+        <button type="button" data-mark="superscript" title="${t("superscript")}">x²</button>
+        <button type="button" data-mark="subscript" title="${t("subscript")}">x₂</button>
+        <label class="ora-toolbar-color" title="${t("color")}">
+          <input type="color" data-cmd="color" value="#1c1917" aria-label="${t("color")}">
+        </label>
+        <label class="ora-toolbar-color" title="${t("highlight")}">
+          <input type="color" data-cmd="background" value="#fde68a" aria-label="${t("highlight")}">
+        </label>
+        <button type="button" data-cmd="outdent" title="${t("outdent")}">⇤</button>
+        <button type="button" data-cmd="indent" title="${t("indent")}">⇥</button>
+        <button type="button" data-align="left" title="${t("alignLeft")}">⬅</button>
+        <button type="button" data-align="center" title="${t("alignCenter")}">⬌</button>
+        <button type="button" data-align="right" title="${t("alignRight")}">➡</button>
+        <button type="button" data-align="justify" title="${t("alignJustify")}">☰</button>
+        <select data-cmd="lineHeight" title="${t("lineHeight")}" aria-label="${t("lineHeight")}">
+          <option value="1">1</option>
+          <option value="1.15">1.15</option>
+          <option value="1.5" selected>1.5</option>
+          <option value="1.65">1.65</option>
+          <option value="2">2</option>
+        </select>
+        <button type="button" data-cmd="unlink" title="${t("unlink")}">⛓️‍💥</button>
+        <button type="button" data-cmd="blockquote" title="${t("blockquote")}">“</button>
+        <button type="button" data-cmd="codeBlock" title="${t("codeBlock")}">{ }</button>
+        ${image}
+        ${tableExtras}
+        ${media}
+        <button type="button" data-cmd="horizontalRule" title="${t("horizontalRule")}">―</button>
+        <button type="button" data-cmd="anchor" title="${t("anchor")}">⚓</button>
+        <button type="button" data-cmd="file" title="${t("file")}">📎</button>
+        <button type="button" data-cmd="emoji" title="${t("emoji")}">😊</button>
+        <button type="button" data-cmd="toc" title="${t("toc")}">☰¶</button>
+        <div class="ora-emoji-picker" hidden>${emojis}</div>
+      </div>
+    </div>
+    <button type="button" data-cmd="dark" title="${t("darkMode")}">◐</button>
     <button type="button" data-cmd="fullscreen" title="${t("fullscreen")}">⛶</button>
   `;
 }

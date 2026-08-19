@@ -120,6 +120,11 @@ export function bindInput(editor: OraEditor, contentEl: HTMLElement): () => void
       void editor.insertImageFile(image, "clipboard");
       return;
     }
+    const attached = files.find((file) => !file.type.startsWith("image/"));
+    if (attached) {
+      void editor.insertFileFile(attached, "clipboard");
+      return;
+    }
     const html = event.clipboardData?.getData("text/html");
     const text = event.clipboardData?.getData("text/plain") ?? "";
     if (html) {
@@ -134,11 +139,16 @@ export function bindInput(editor: OraEditor, contentEl: HTMLElement): () => void
   const onDrop = (event: DragEvent) => {
     const files = Array.from(event.dataTransfer?.files ?? []);
     const image = files.find((file) => file.type.startsWith("image/"));
-    if (!image || !editor.features.images) {
+    if (image && editor.features.images) {
+      event.preventDefault();
+      void editor.insertImageFile(image, "drop");
       return;
     }
-    event.preventDefault();
-    void editor.insertImageFile(image, "drop");
+    const attached = files.find((file) => !file.type.startsWith("image/"));
+    if (attached) {
+      event.preventDefault();
+      void editor.insertFileFile(attached, "drop");
+    }
   };
 
   const onDragOver = (event: DragEvent) => {
@@ -196,6 +206,18 @@ export function bindInput(editor: OraEditor, contentEl: HTMLElement): () => void
     if (cell && contentEl.contains(cell)) {
       const path = cell.dataset.oraPath?.split(".").map(Number);
       if (path && path.length >= 3 && path.every((part) => !Number.isNaN(part))) {
+        if (event.shiftKey) {
+          event.preventDefault();
+          const current = editor.getSelection();
+          const start =
+            current.type === "cell"
+              ? current.anchor
+              : current.type === "text" && current.anchor.path.length >= 3
+                ? current.anchor.path.slice(0, 3)
+                : path;
+          editor.setCellSelection(start, path);
+          return;
+        }
         editor.setSelectionFromDom({ type: "text", anchor: { path: [...path, 0], offset: 0 }, focus: { path: [...path, 0], offset: 0 } });
       }
     }
@@ -288,6 +310,7 @@ function handleBeforeInput(editor: OraEditor, e: InputEvent): void {
   switch (e.inputType) {
     case "insertText":
       editor.exec("insertText", { text: e.data ?? "" });
+      void editor.refreshMentions();
       break;
     case "insertParagraph":
     case "insertLineBreak":

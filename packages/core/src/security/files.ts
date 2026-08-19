@@ -29,3 +29,22 @@ export function validateImageFile(file: File, options: FileValidationOptions = {
   }
   return null;
 }
+
+export function validateFile(file: File, options: FileValidationOptions = {}): string | null {
+  const maxBytes = options.maxBytes ?? 15 * 1024 * 1024;
+  const extensions = new Set(
+    (options.extensions ?? [".pdf", ".txt", ".csv", ".zip", ".doc", ".docx", ".odt", ".rtf", ".xls", ".xlsx"]).map((item) => item.toLowerCase()),
+  );
+  if (file.size > maxBytes) {
+    return `Fichier trop volumineux (max ${Math.round(maxBytes / 1024 / 1024)} Mo).`;
+  }
+  const name = file.name.toLowerCase();
+  const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+  if (!extensions.has(ext)) {
+    return "Extension de fichier non autorisée.";
+  }
+  if (ext === ".svg" || file.type === "image/svg+xml") {
+    return "Les fichiers SVG ne sont pas autorisés.";
+  }
+  return null;
+}

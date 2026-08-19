@@ -79,4 +79,20 @@ describe("HTML converters", () => {
     expect(out).toContain("colspan=\"2\"");
     expect(out).toContain("background-color: #fde68a");
   });
+
+  it("round-trip ligne, fichier, sommaire et mention", () => {
+    const html =
+      '<h2 id="intro">Intro</h2><hr><a class="ora-file" href="https://example.com/a.pdf" download="a.pdf">PDF</a>' +
+      '<nav class="ora-toc"><ol></ol></nav><p><span class="ora-mention" data-mention="fabien">@fabien</span></p>';
+    const doc = fromHTML(html);
+    expect(doc.content[0]).toMatchObject({ type: "heading", attrs: { id: "intro", level: 2 } });
+    expect(doc.content[1]?.type).toBe("horizontalRule");
+    expect(doc.content[2]).toMatchObject({ type: "file", attrs: { src: "https://example.com/a.pdf" } });
+    expect(doc.content[3]?.type).toBe("toc");
+    const out = toHTML(doc);
+    expect(out).toContain("<hr>");
+    expect(out).toContain("ora-file");
+    expect(out).toContain("ora-toc");
+    expect(out).toContain("ora-mention");
+  });
 });

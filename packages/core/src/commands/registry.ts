@@ -131,6 +131,34 @@ export function registerBuiltinCommands(commands: CommandRegistry): void {
     const src = String(args?.src ?? "");
     return src ? editor.dispatch((tr) => tr.insertBlock({ type: "embed", attrs: { src } }), { kind: "other" }) : false;
   });
+  commands.register("insertHorizontalRule", (editor) => editor.dispatch((tr) => tr.insertBlock({ type: "horizontalRule" }), { kind: "other" }));
+  commands.register("insertFile", (editor, args) => {
+    const src = String(args?.src ?? "");
+    if (!src) {
+      return false;
+    }
+    return editor.dispatch((tr) => tr.insertBlock({
+      type: "file",
+      attrs: {
+        src,
+        title: String(args?.title ?? args?.filename ?? src),
+        filename: String(args?.filename ?? ""),
+      },
+    }), { kind: "other" });
+  });
+  commands.register("insertToc", (editor) => editor.dispatch((tr) => tr.ensureHeadingAnchors().insertBlock({ type: "toc" }), { kind: "other" }));
+  commands.register("setAnchor", (editor, args) => {
+    const id = typeof args?.id === "string" ? args.id : undefined;
+    return editor.dispatch((tr) => tr.setAnchor(id), { kind: "format" });
+  });
+  commands.register("insertMention", (editor, args) => {
+    const value = String(args?.value ?? "");
+    return value ? editor.dispatch((tr) => tr.insertMention(value), { kind: "format" }) : false;
+  });
+  commands.register("toggleTheme", (editor) => {
+    editor.toggleTheme();
+    return true;
+  });
   commands.register("insertTable", (editor, args) => {
     const rows = Number(args?.rows ?? 3);
     const cols = Number(args?.cols ?? 3);
@@ -142,6 +170,7 @@ export function registerBuiltinCommands(commands: CommandRegistry): void {
   commands.register("tableDeleteColumn", (editor) => editor.dispatch((tr) => tr.tableDeleteColumn(), { kind: "format" }));
   commands.register("tableMergeRight", (editor) => editor.dispatch((tr) => tr.tableMergeRight(), { kind: "format" }));
   commands.register("tableMergeDown", (editor) => editor.dispatch((tr) => tr.tableMergeDown(), { kind: "format" }));
+  commands.register("tableMergeSelection", (editor) => editor.dispatch((tr) => tr.tableMergeSelection(), { kind: "format" }));
   commands.register("tableSplitCell", (editor) => editor.dispatch((tr) => tr.tableSplitCell(), { kind: "format" }));
   commands.register("tableToggleHeaderRow", (editor, args) => {
     const table = typeof args?.table === "number" ? args.table : undefined;

@@ -197,7 +197,7 @@ ${pre(SNIPPETS.tree)}
 <tr><td>Reasonable CSP</td><td>Scripts only from your origin</td></tr>
 <tr><td>CORS only if the front is on another domain</td><td>Otherwise unused</td></tr>
 </tbody></table>
-<p>After updating JS/CSS, hard-refresh or suffix <code>?v=0.1.2</code>.</p>
+<p>After updating JS/CSS, hard-refresh or suffix <code>?v=0.1.3</code>.</p>
 <footer class="page-foot"><a href="php.html">Wire upload + AI in PHP</a></footer>`],
     php: ["PHP", `<p class="kicker">Frameworks</p>
 <h1>PHP</h1>

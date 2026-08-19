@@ -2,6 +2,7 @@ export type { CellSelection, NodeSelection, Selection, TextSelection } from "./t
 export {
   collapsed,
   initialSelection,
+  isCellSelection,
   isCollapsed,
   isTextSelection,
   rangeSpansBlocks,

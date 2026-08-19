@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OraEditor
  * Description: Embarque OraEditor (shortcode + metabox + REST upload/IA).
- * Version: 0.1.2
+ * Version: 0.1.3,
  * Requires at least: 6.4
  * Requires PHP: 8.1
  */
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-const ORA_EDITOR_VERSION = '0.1.2';
+const ORA_EDITOR_VERSION = '0.1.3';
 
 add_action('admin_menu', static function (): void {
     add_options_page('OraEditor', 'OraEditor', 'manage_options', 'ora-editor', 'ora_editor_settings_page');

@@ -25,6 +25,9 @@ export interface OraEditorOptions {
   features?: Partial<OraFeatures>;
   locale?: string;
   placeholder?: string;
+  theme?: "light" | "dark" | "auto";
+  mentions?: (query: string) => Array<string | { id: string; label: string }> | Promise<Array<string | { id: string; label: string }>>;
+  uploadFile?: UploadAdapter["uploadFile"];
 }
 
 export function resolveFeatures(options: OraEditorOptions): OraFeatures {

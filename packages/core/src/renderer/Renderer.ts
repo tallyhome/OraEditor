@@ -7,9 +7,11 @@ import { cellBackground, cellColSpan, cellRowSpan } from "../document/table.js";
 import { isSafeEmbedUrl } from "../security/embed.js";
 import { normalizeMarks } from "../document/marks.js";
 import type { Selection, TextSelection } from "../selection/types.js";
-import { isTextSelection } from "../selection/types.js";
+import { isCellSelection, isTextSelection } from "../selection/types.js";
 import { isSafeCssColor, isSafeFontFamily, isSafeFontSize } from "../security/css.js";
 import { isSafeUrl } from "../security/urls.js";
+import { isSafeAnchorId, slugifyAnchor } from "../document/anchor.js";
+import { textContent } from "../document/node.js";
 
 export class Renderer {
   readonly contentEl: HTMLElement;
@@ -68,6 +70,7 @@ export class Renderer {
       handle.title = this.headerLabel;
       handle.setAttribute("aria-label", this.headerLabel);
     });
+    this.highlightCellSelection(selection);
     if (syncSelection) {
       this.applySelection(selection);
     }
@@ -87,6 +90,32 @@ export class Renderer {
       return;
     }
     view.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+  }
+
+  private highlightCellSelection(selection: Selection): void {
+    this.contentEl.querySelectorAll("td.is-selected, th.is-selected").forEach((el) => el.classList.remove("is-selected"));
+    if (!isCellSelection(selection) || selection.anchor.length < 3 || selection.focus.length < 3) {
+      return;
+    }
+    const tableIndex = selection.anchor[0];
+    const tableEl = this.contentEl.children[tableIndex ?? 0];
+    if (!(tableEl instanceof HTMLTableElement)) {
+      return;
+    }
+    const [r1, c1] = [selection.anchor[1] ?? 0, selection.anchor[2] ?? 0];
+    const [r2, c2] = [selection.focus[1] ?? 0, selection.focus[2] ?? 0];
+    const rMin = Math.min(r1, r2);
+    const rMax = Math.max(r1, r2);
+    const cMin = Math.min(c1, c2);
+    const cMax = Math.max(c1, c2);
+    tableEl.querySelectorAll<HTMLElement>("td[data-ora-path], th[data-ora-path]").forEach((cell) => {
+      const parts = cell.dataset.oraPath?.split(".").map(Number) ?? [];
+      const row = parts[1] ?? -1;
+      const col = parts[2] ?? -1;
+      if (row >= rMin && row <= rMax && col >= cMin && col <= cMax) {
+        cell.classList.add("is-selected");
+      }
+    });
   }
 
   selectionFromDom(): TextSelection | null {
@@ -113,7 +142,7 @@ export class Renderer {
 
 function renderBlock(node: OraNode, index: number, doc: OraDocument): HTMLElement {
   if (isElement(node) && isAtomicBlock(node)) {
-    return renderAtomic(node, index);
+    return renderAtomic(node, index, doc);
   }
   if (isElement(node) && isTable(node)) {
     return renderTable(node, index);
@@ -141,12 +170,16 @@ function renderBlock(node: OraNode, index: number, doc: OraDocument): HTMLElemen
   return el;
 }
 
-function renderAtomic(node: OraElement, index: number): HTMLElement {
+function renderAtomic(node: OraElement, index: number, doc?: OraDocument): HTMLElement {
   const wrap = document.createElement("figure");
   wrap.dataset.oraPath = String(index);
   wrap.dataset.oraNode = node.type;
   wrap.contentEditable = "false";
   wrap.className = `ora-atomic ora-${node.type}`;
+  const blockId = typeof node.attrs?.id === "string" && isSafeAnchorId(node.attrs.id) ? node.attrs.id : "";
+  if (blockId) {
+    wrap.id = blockId;
+  }
   const align = node.attrs?.align;
   if (align === "left" || align === "center" || align === "right") {
     wrap.style.textAlign = align;
@@ -158,7 +191,23 @@ function renderAtomic(node: OraElement, index: number): HTMLElement {
     wrap.classList.add("ora-atomic--border");
   }
   const src = String(node.attrs?.src ?? "");
-  if (node.type === "image" && isSafeUrl(src)) {
+  if (node.type === "horizontalRule") {
+    wrap.appendChild(document.createElement("hr"));
+  } else if (node.type === "file" && isSafeUrl(src)) {
+    const link = document.createElement("a");
+    link.className = "ora-file";
+    link.href = src;
+    const filename = typeof node.attrs?.filename === "string" ? node.attrs.filename : "";
+    if (filename) {
+      link.setAttribute("download", filename);
+    } else {
+      link.setAttribute("download", "");
+    }
+    link.textContent = String(node.attrs?.title ?? (filename || src));
+    wrap.appendChild(link);
+  } else if (node.type === "toc") {
+    wrap.appendChild(renderToc(doc));
+  } else if (node.type === "image" && isSafeUrl(src)) {
     const img = document.createElement("img");
     img.src = src;
     img.alt = String(node.attrs?.alt ?? "");
@@ -199,6 +248,28 @@ function renderAtomic(node: OraElement, index: number): HTMLElement {
     wrap.classList.add("ora-atomic--uploading");
   }
   return wrap;
+}
+
+function renderToc(doc?: OraDocument): HTMLElement {
+  const nav = document.createElement("nav");
+  nav.className = "ora-toc";
+  const list = document.createElement("ol");
+  (doc?.content ?? [])
+    .filter(isElement)
+    .filter((block) => block.type === "heading")
+    .forEach((block) => {
+      const text = textContent(block).trim() || "…";
+      const stored = typeof block.attrs?.id === "string" ? block.attrs.id : "";
+      const id = stored && isSafeAnchorId(stored) ? stored : slugifyAnchor(text);
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = `#${id}`;
+      link.textContent = text;
+      item.appendChild(link);
+      list.appendChild(item);
+    });
+  nav.appendChild(list);
+  return nav;
 }
 
 function renderTable(node: OraElement, index: number): HTMLElement {
@@ -278,6 +349,11 @@ function blockTag(node: OraNode): string {
 }
 
 function applyBlockChrome(el: HTMLElement, node: OraElement, index: number, doc: OraDocument): void {
+  const stored = typeof node.attrs?.id === "string" ? node.attrs.id : "";
+  const id = stored && isSafeAnchorId(stored) ? stored : node.type === "heading" ? slugifyAnchor(textContent(node)) : "";
+  if (id) {
+    el.id = id;
+  }
   const align = blockAlign(node);
   if (align) {
     el.style.textAlign = align;
@@ -389,6 +465,11 @@ function wrapMark(mark: OraMark, child: Node): HTMLElement {
       }
       break;
     }
+    case "mention":
+      el = document.createElement("span");
+      el.className = "ora-mention";
+      el.dataset.mention = mark.value;
+      break;
     default: {
       el = document.createElement("span");
       if (mark.type === "color" && isSafeCssColor(mark.value)) {

@@ -44,5 +44,6 @@ export {
 } from "./node.js";
 export { fromJSON, toJSON } from "./json.js";
 export { fromHTML, toHTML } from "./html.js";
+export { isSafeAnchorId, slugifyAnchor } from "./anchor.js";
 export { nextNormalizeOp, normalizeDocument } from "./normalize.js";
 export { migrateDocument } from "./migrations/index.js";

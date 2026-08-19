@@ -42,11 +42,14 @@ import { extractAIFragments, mountAIPanel } from "../ui/aiPanel.js";
 import { mountFindBar } from "../ui/findBar.js";
 import { mountStatusBar } from "../ui/statusBar.js";
 import { blobUploadAdapter } from "../adapters/upload.js";
-import { validateImageFile } from "../security/files.js";
+import { validateImageFile, validateFile } from "../security/files.js";
 import type { OraEditorOptions, OraFeatures } from "./options.js";
 import { resolveFeatures } from "./options.js";
 import { documentStats } from "../document/search.js";
 import { resolveLocale, t as translate, type OraLocale, type OraMessageKey } from "../i18n/index.js";
+import { hideMentionMenu, showMentionMenu } from "../ui/mentionMenu.js";
+import { isCellSelection } from "../selection/types.js";
+import type { Path } from "../document/types.js";
 
 export interface DispatchOptions {
   history?: boolean;
@@ -103,6 +106,9 @@ export class OraEditor {
   private unbindStatus: (() => void) | null = null;
   private destroyed = false;
   private busy = false;
+  private theme: "light" | "dark" | "auto" = "light";
+  private mediaQuery: MediaQueryList | null = null;
+  private onSchemeChange: (() => void) | null = null;
   private state: {
     doc: OraDocument;
     selection: Selection;
@@ -116,6 +122,7 @@ export class OraEditor {
     this.host = resolveElement(options.element);
     this.host.classList.add("ora-editor");
     this.host.lang = this.locale;
+    this.applyTheme(options.theme ?? "light");
     this.root = document.createElement("div");
     this.root.className = "ora-root";
     this.host.appendChild(this.root);
@@ -347,7 +354,9 @@ export class OraEditor {
         ? (this.state.selection.path[0] ?? 0)
         : isTextSelection(this.state.selection)
           ? (this.state.selection.anchor.path[0] ?? 0)
-          : 0;
+          : isCellSelection(this.state.selection)
+            ? (this.state.selection.anchor[0] ?? 0)
+            : 0;
     const block = this.state.doc.content[index];
     if (!block || isText(block)) {
       return { type: "paragraph" };
@@ -359,6 +368,64 @@ export class OraEditor {
     this.state.selection = { type: "node", path };
     this.state.storedMarks = null;
     this.events.emit("selectionChange", undefined);
+  }
+
+  setCellSelection(anchor: Path, focus: Path): void {
+    this.state.selection = { type: "cell", anchor, focus };
+    this.state.storedMarks = null;
+    this.renderer.render(this.state.doc, this.state.selection, false);
+    this.events.emit("selectionChange", undefined);
+  }
+
+  async insertFileFile(file: File, source: "button" | "drop" | "clipboard" = "button"): Promise<void> {
+    const invalid = validateFile(file);
+    if (invalid) {
+      this.events.emit("fileUploadError", { error: new Error(invalid) });
+      return;
+    }
+    this.events.emit("fileUploadStart", { file });
+    try {
+      const upload = this.options.uploadFile ?? blobUploadAdapter.uploadFile ?? blobUploadAdapter.uploadImage;
+      const asset = await upload(file, { source });
+      this.exec("insertFile", {
+        src: asset.url,
+        title: asset.alt ?? file.name,
+        filename: file.name,
+      });
+      this.events.emit("fileUploadSuccess", { url: asset.url });
+    } catch (error) {
+      this.events.emit("fileUploadError", { error: error instanceof Error ? error : new Error(String(error)) });
+    }
+  }
+
+  async refreshMentions(): Promise<void> {
+    const selection = this.state.selection;
+    if (!isTextSelection(selection) || !isCollapsed(selection)) {
+      hideMentionMenu(this.host);
+      return;
+    }
+    const node = getNode(this.state.doc, selection.anchor.path);
+    if (!isText(node)) {
+      hideMentionMenu(this.host);
+      return;
+    }
+    const before = node.text.slice(0, selection.anchor.offset);
+    const match = /(?:^|\s)@([A-Za-z0-9._-]{0,40})$/.exec(before);
+    const provider = this.options.mentions;
+    if (!match || !provider) {
+      hideMentionMenu(this.host);
+      return;
+    }
+    this.events.emit("mentionQuery", { query: match[1] ?? "" });
+    const raw = await provider(match[1] ?? "");
+    const items = raw.map((item) => (typeof item === "string" ? { id: item, label: item } : { id: item.id, label: item.label }));
+    if (items.length === 0) {
+      hideMentionMenu(this.host);
+      return;
+    }
+    showMentionMenu(this.host, items, (item) => {
+      this.exec("insertMention", { value: item.label });
+    });
   }
 
   async insertImageFile(file: File, source: "button" | "drop" | "clipboard" = "button"): Promise<void> {
@@ -528,6 +595,33 @@ export class OraEditor {
     return this.host.classList.contains("ora-editor--fullscreen");
   }
 
+  applyTheme(theme: "light" | "dark" | "auto"): void {
+    this.theme = theme;
+    this.onSchemeChange && this.mediaQuery?.removeEventListener("change", this.onSchemeChange);
+    this.onSchemeChange = null;
+    this.mediaQuery = null;
+    if (theme === "auto" && typeof window !== "undefined" && window.matchMedia) {
+      this.mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      this.onSchemeChange = () => this.syncThemeClass();
+      this.mediaQuery.addEventListener("change", this.onSchemeChange);
+    }
+    this.syncThemeClass();
+  }
+
+  toggleTheme(): void {
+    this.applyTheme(this.host.classList.contains("ora-editor--dark") ? "light" : "dark");
+  }
+
+  isDark(): boolean {
+    return this.host.classList.contains("ora-editor--dark");
+  }
+
+  private syncThemeClass(): void {
+    const dark =
+      this.theme === "dark" || (this.theme === "auto" && (this.mediaQuery?.matches ?? false));
+    this.host.classList.toggle("ora-editor--dark", dark);
+  }
+
   t(key: OraMessageKey, vars?: Record<string, string | number>): string {
     return translate(this.locale, key, vars);
   }
@@ -570,7 +664,9 @@ export class OraEditor {
     this.plugins.destroy();
     this.renderer.destroy();
     this.root.remove();
-    this.host.classList.remove("ora-editor", "ora-editor--fullscreen");
+    hideMentionMenu(this.host);
+    this.onSchemeChange && this.mediaQuery?.removeEventListener("change", this.onSchemeChange);
+    this.host.classList.remove("ora-editor", "ora-editor--fullscreen", "ora-editor--dark");
     this.events.emit("destroy", undefined);
     this.events.clear();
   }

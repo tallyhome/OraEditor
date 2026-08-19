@@ -11,7 +11,11 @@ export type OraEventType =
   | "aiRequestStart"
   | "aiRequestSuccess"
   | "aiRequestError"
-  | "pluginLoaded";
+  | "pluginLoaded"
+  | "fileUploadStart"
+  | "fileUploadSuccess"
+  | "fileUploadError"
+  | "mentionQuery";
 
 export type OraEventMap = {
   ready: { editor: unknown };
@@ -27,6 +31,10 @@ export type OraEventMap = {
   aiRequestSuccess: { op: string };
   aiRequestError: { op: string; error: Error };
   pluginLoaded: { id: string };
+  fileUploadStart: { file: File };
+  fileUploadSuccess: { url: string };
+  fileUploadError: { error: Error };
+  mentionQuery: { query: string };
 };
 
 export type EventHandler<K extends OraEventType> = (payload: OraEventMap[K]) => void;

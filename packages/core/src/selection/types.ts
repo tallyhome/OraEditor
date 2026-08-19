@@ -25,6 +25,10 @@ export function isTextSelection(selection: Selection): selection is TextSelectio
   return selection.type === "text";
 }
 
+export function isCellSelection(selection: Selection): selection is CellSelection {
+  return selection.type === "cell";
+}
+
 export function collapsed(point: Point): TextSelection {
   return { type: "text", anchor: point, focus: point };
 }

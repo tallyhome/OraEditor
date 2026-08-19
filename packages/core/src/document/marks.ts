@@ -13,6 +13,7 @@ const MARK_ORDER = [
   "background",
   "fontSize",
   "fontFamily",
+  "mention",
 ] as const;
 
 export function markKey(mark: OraMark): string {
@@ -21,6 +22,7 @@ export function markKey(mark: OraMark): string {
     case "background":
     case "fontSize":
     case "fontFamily":
+    case "mention":
       return `${mark.type}:${mark.value}`;
     case "link":
       return `link:${mark.href}:${mark.target ?? ""}:${(mark.rel ?? []).join(",")}`;

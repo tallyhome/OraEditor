@@ -37,7 +37,7 @@ export {
   createOpenAIProvider,
   createCustomProvider,
 } from "./ai/index.js";
-export { isSafeUrl, validateImageFile } from "./security/index.js";
+export { isSafeUrl, validateImageFile, validateFile } from "./security/index.js";
 export { CommandRegistry } from "./commands/index.js";
 export { cleanPastedHtml, cleanWordHtml } from "./clipboard/index.js";
 export { resolveLocale, supportedLocales } from "./i18n/index.js";

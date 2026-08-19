@@ -1,12 +1,13 @@
 import type { OraDocument, OraElement, OraMark, OraNode, OraText, Path, Point } from "../document/types.js";
 import { cloneNode, emptyParagraph, emptyText, isElement, isText } from "../document/types.js";
-import { getNode, getParent, hasNode, nodeLength, textContent } from "../document/node.js";
-import { pathEquals, pathIndex, pathNext, pathParent, pathPrevious } from "../document/path.js";
+import { getNode, getParent, hasNode, nodeLength, textContent, walkTextPaths } from "../document/node.js";
+import { pathEquals, pathIndex, pathNext, pathParent, pathPrevious, pathCompare } from "../document/path.js";
 import { pointEquals } from "../document/point.js";
 import { addMarkIn, hasMark, marksEqual, removeMarkIn, toggleMarkIn } from "../document/marks.js";
 import { emptyCell, emptyTable, isAtomicBlock, isListItem, isTable, isTextBlock } from "../document/blocks.js";
 import { blockIndent, listLevel, listOrdered } from "../document/schema.js";
-import { matchBlockShortcut, matchBoldShortcut } from "../document/markdown.js";
+import { matchBlockShortcut, matchBoldShortcut, matchItalicShortcut } from "../document/markdown.js";
+import { isSafeAnchorId, slugifyAnchor } from "../document/anchor.js";
 import {
   buildTableGrid,
   cellColSpan,
@@ -21,7 +22,7 @@ import { linkRangeAt } from "../document/linkRange.js";
 import { isSafeUrl } from "../security/urls.js";
 import { isSafeCssColor } from "../security/css.js";
 import type { Selection, TextSelection } from "../selection/types.js";
-import { collapsed, isCollapsed, isTextSelection, selectionEdges } from "../selection/types.js";
+import { collapsed, isCellSelection, isCollapsed, isTextSelection, selectionEdges } from "../selection/types.js";
 import { applyOperation } from "./apply.js";
 import { invertOperation } from "./invert.js";
 import type { Operation } from "./types.js";
@@ -105,7 +106,7 @@ export class Transform {
     }
     this.storedMarks = null;
     this.normalize();
-    return this.applyMarkdownShortcuts(text);
+    return this.applyMarkdownShortcuts(text).applyMentionShortcut(text);
   }
 
   deleteSelection(): this {
@@ -121,6 +122,10 @@ export class Transform {
   deleteBackward(): this {
     if (this.selection.type === "node") {
       return this.removeBlockAt(this.selection.path[0] ?? 0);
+    }
+    if (isCellSelection(this.selection)) {
+      const [table, row, col] = this.selection.anchor;
+      return this.setSelection(collapsed({ path: [table ?? 0, row ?? 0, col ?? 0, 0], offset: 0 }));
     }
     if (!isTextSelection(this.selection)) {
       return this;
@@ -365,19 +370,9 @@ export class Transform {
       return this;
     }
     if (isCollapsed(this.selection)) {
-      const path = this.selection.anchor.path;
-      const node = hasNode(this.doc, path) ? getNode(this.doc, path) : undefined;
-      if (node && isText(node) && node.text.length > 0) {
-        this.setSelection({
-          type: "text",
-          anchor: { path, offset: 0 },
-          focus: { path, offset: node.text.length },
-        });
-      } else {
-        const current = this.storedMarks ?? activeMarksAt(this.doc, this.selection.anchor);
-        this.storedMarks = addMarkIn(current, mark);
-        return this;
-      }
+      const current = this.storedMarks ?? activeMarksAt(this.doc, this.selection.anchor);
+      this.storedMarks = addMarkIn(current, mark);
+      return this;
     }
     const edges = selectionEdges(this.selection);
     this.splitRangeEdges(edges.start, edges.end);
@@ -480,7 +475,9 @@ export class Transform {
       ? (this.selection.anchor.path[0] ?? 0)
       : this.selection.type === "node"
         ? (this.selection.path[0] ?? 0)
-        : 0;
+        : this.selection.type === "cell"
+          ? (this.selection.anchor[0] ?? 0)
+          : 0;
     const current = hasNode(this.doc, [index]) ? getNode(this.doc, [index]) : null;
     if (current && isElement(current) && isTextBlock(current) && isBlockEmpty(current)) {
       this.applyOp({ type: "remove_node", path: [index], node: current });
@@ -629,6 +626,165 @@ export class Transform {
 
   tableMergeDown(): this {
     return this.mergeTableCell("down");
+  }
+
+  tableMergeSelection(): this {
+    if (!isCellSelection(this.selection)) {
+      return this.mergeTableCell("right");
+    }
+    const [tableIndex, aRow, aCol] = this.selection.anchor;
+    const [, bRow, bCol] = this.selection.focus;
+    if (tableIndex === undefined || aRow === undefined || aCol === undefined || bRow === undefined || bCol === undefined) {
+      return this;
+    }
+    const table = getNode(this.doc, [tableIndex]);
+    if (!isTable(table)) {
+      return this;
+    }
+    const grid = buildTableGrid(table);
+    const a = findOriginSlot(grid, aRow, aCol);
+    const b = findOriginSlot(grid, bRow, bCol);
+    if (!a || !b) {
+      return this;
+    }
+    const aCell = getNode(this.doc, [tableIndex, a.row, a.cell]);
+    const bCell = getNode(this.doc, [tableIndex, b.row, b.cell]);
+    if (!isElement(aCell) || !isElement(bCell)) {
+      return this;
+    }
+    const rMin = Math.min(a.visualRow, b.visualRow);
+    const cMin = Math.min(a.visualCol, b.visualCol);
+    const rMax = Math.max(a.visualRow + cellRowSpan(aCell) - 1, b.visualRow + cellRowSpan(bCell) - 1);
+    const cMax = Math.max(a.visualCol + cellColSpan(aCell) - 1, b.visualCol + cellColSpan(bCell) - 1);
+    const origins = new Map<string, { row: number; cell: number; visualRow: number; visualCol: number }>();
+    for (let r = rMin; r <= rMax; r += 1) {
+      for (let c = cMin; c <= cMax; c += 1) {
+        const slot = grid[r]?.[c];
+        if (!slot) {
+          return this;
+        }
+        const origin = findOriginSlot(grid, slot.row, slot.cell);
+        const originCell = getNode(this.doc, [tableIndex, slot.row, slot.cell]);
+        if (!origin || !isElement(originCell) || originCell.type !== "tableCell") {
+          return this;
+        }
+        if (origin.visualRow < rMin || origin.visualCol < cMin) {
+          return this;
+        }
+        if (origin.visualRow + cellRowSpan(originCell) - 1 > rMax || origin.visualCol + cellColSpan(originCell) - 1 > cMax) {
+          return this;
+        }
+        origins.set(`${slot.row}.${slot.cell}`, {
+          row: slot.row,
+          cell: slot.cell,
+          visualRow: origin.visualRow,
+          visualCol: origin.visualCol,
+        });
+      }
+    }
+    if (origins.size < 2) {
+      return this;
+    }
+    const sorted = [...origins.values()].sort((left, right) => left.visualRow - right.visualRow || left.visualCol - right.visualCol);
+    const keeper = sorted[0];
+    if (!keeper) {
+      return this;
+    }
+    const keeperNode = getNode(this.doc, [tableIndex, keeper.row, keeper.cell]);
+    if (!isElement(keeperNode) || keeperNode.type !== "tableCell") {
+      return this;
+    }
+    let insertAt = (keeperNode.content ?? []).length;
+    for (const origin of sorted.slice(1)) {
+      const cell = getNode(this.doc, [tableIndex, origin.row, origin.cell]);
+      if (!isElement(cell)) {
+        continue;
+      }
+      for (const child of cell.content ?? []) {
+        if (isText(child) && child.text.length === 0) {
+          continue;
+        }
+        this.applyOp({ type: "insert_node", path: [tableIndex, keeper.row, keeper.cell, insertAt], node: cloneNode(child) });
+        insertAt += 1;
+      }
+    }
+    this.applyOp({
+      type: "set_node",
+      path: [tableIndex, keeper.row, keeper.cell],
+      properties: { type: "tableCell", attrs: keeperNode.attrs },
+      newProperties: { type: "tableCell", attrs: spanAttrs(cMax - cMin + 1, rMax - rMin + 1, { ...(keeperNode.attrs ?? {}) }) },
+    });
+    for (const origin of sorted.slice(1).sort((left, right) => right.row - left.row || right.cell - left.cell)) {
+      const cell = getNode(this.doc, [tableIndex, origin.row, origin.cell]);
+      this.applyOp({ type: "remove_node", path: [tableIndex, origin.row, origin.cell], node: cell });
+    }
+    this.setSelection(collapsed({ path: [tableIndex, keeper.row, keeper.cell, 0], offset: 0 }));
+    return this.normalize();
+  }
+
+  setAnchor(id?: string): this {
+    const index = isTextSelection(this.selection)
+      ? (this.selection.anchor.path[0] ?? 0)
+      : this.selection.type === "node"
+        ? (this.selection.path[0] ?? 0)
+        : 0;
+    if (!hasNode(this.doc, [index])) {
+      return this;
+    }
+    const block = getNode(this.doc, [index]);
+    if (!isElement(block)) {
+      return this;
+    }
+    const nextId = id && isSafeAnchorId(id) ? id.trim() : slugifyAnchor(textContent(block));
+    return this.setNodeAttrs([index], { id: nextId });
+  }
+
+  ensureHeadingAnchors(): this {
+    const used = new Set<string>();
+    this.doc.content.forEach((block, index) => {
+      if (!isElement(block) || block.type !== "heading") {
+        return;
+      }
+      const existing = typeof block.attrs?.id === "string" ? block.attrs.id : "";
+      if (existing && isSafeAnchorId(existing) && !used.has(existing)) {
+        used.add(existing);
+        return;
+      }
+      let next = slugifyAnchor(textContent(block));
+      let n = 2;
+      while (used.has(next)) {
+        next = `${slugifyAnchor(textContent(block)).slice(0, 60)}-${n}`;
+        n += 1;
+      }
+      used.add(next);
+      this.setNodeAttrs([index], { id: next });
+    });
+    return this;
+  }
+
+  insertMention(value: string): this {
+    if (!isTextSelection(this.selection) || !isCollapsed(this.selection) || !value.trim()) {
+      return this;
+    }
+    const point = this.selection.anchor;
+    if (!hasNode(this.doc, point.path)) {
+      return this;
+    }
+    const node = getNode(this.doc, point.path);
+    if (!isText(node)) {
+      return this;
+    }
+    const before = node.text.slice(0, point.offset);
+    const match = /@([A-Za-z0-9._-]{0,40})$/.exec(before);
+    const from = match ? point.offset - match[0].length : point.offset;
+    if (match) {
+      this.applyOp({ type: "remove_text", path: point.path, offset: from, text: match[0] });
+    }
+    const label = `@${value.trim().replace(/^@/, "").slice(0, 80)}`;
+    const marks = addMarkIn(node.marks, { type: "mention", value: value.trim().replace(/^@/, "").slice(0, 80) });
+    this.setSelection(collapsed({ path: point.path, offset: from }));
+    this.insertMarkedText({ path: point.path, offset: from }, label, marks);
+    return this.normalize();
   }
 
   tableSplitCell(): this {
@@ -839,13 +995,31 @@ export class Transform {
     if (!isElement(block) || block.type === "codeBlock") {
       return this;
     }
-    if (inserted === "*" ) {
-      const match = matchBoldShortcut(node.text.slice(0, point.offset));
-      if (match) {
+    if (inserted === "*" || inserted === "-" || inserted === "_") {
+      if ((point.path[1] ?? 1) === 0 && isTextBlock(block) && point.path.length === 2) {
+        const prefix = node.text.slice(0, point.offset);
+        const shortcut = matchBlockShortcut(prefix);
+        if (shortcut?.kind === "rule") {
+          this.applyOp({ type: "remove_text", path: point.path, offset: 0, text: prefix });
+          return this.insertBlock({ type: "horizontalRule" });
+        }
+      }
+    }
+    if (inserted === "*") {
+      const bold = matchBoldShortcut(node.text.slice(0, point.offset));
+      if (bold) {
         const marks = addMarkIn(node.marks, { type: "bold" });
-        this.applyOp({ type: "remove_text", path: point.path, offset: match.from, text: match.raw });
-        this.setSelection(collapsed({ path: point.path, offset: match.from }));
-        this.insertMarkedText({ path: point.path, offset: match.from }, match.inner, marks);
+        this.applyOp({ type: "remove_text", path: point.path, offset: bold.from, text: bold.raw });
+        this.setSelection(collapsed({ path: point.path, offset: bold.from }));
+        this.insertMarkedText({ path: point.path, offset: bold.from }, bold.inner, marks);
+        return this.normalize();
+      }
+      const italic = matchItalicShortcut(node.text.slice(0, point.offset));
+      if (italic) {
+        const marks = addMarkIn(node.marks, { type: "italic" });
+        this.applyOp({ type: "remove_text", path: point.path, offset: italic.from, text: italic.raw });
+        this.setSelection(collapsed({ path: point.path, offset: italic.from }));
+        this.insertMarkedText({ path: point.path, offset: italic.from }, italic.inner, marks);
         return this.normalize();
       }
     }
@@ -856,6 +1030,10 @@ export class Transform {
     const shortcut = matchBlockShortcut(prefix);
     if (!shortcut || (point.path[1] ?? 1) !== 0) {
       return this;
+    }
+    if (shortcut.kind === "rule") {
+      this.applyOp({ type: "remove_text", path: point.path, offset: 0, text: prefix });
+      return this.insertBlock({ type: "horizontalRule" });
     }
     if (shortcut.kind === "list" && isListItem(block)) {
       return this;
@@ -870,7 +1048,46 @@ export class Transform {
     return this.toggleList(shortcut.ordered);
   }
 
+  private applyMentionShortcut(inserted: string): this {
+    if (inserted !== " " && inserted !== "," && inserted !== ";") {
+      return this;
+    }
+    if (!isTextSelection(this.selection) || !isCollapsed(this.selection)) {
+      return this;
+    }
+    const point = this.selection.anchor;
+    if (!hasNode(this.doc, point.path)) {
+      return this;
+    }
+    const node = getNode(this.doc, point.path);
+    if (!isText(node) || hasMark(node.marks, "mention")) {
+      return this;
+    }
+    const before = node.text.slice(0, Math.max(0, point.offset - inserted.length));
+    const match = /(?:^|[\s])@([A-Za-z0-9._-]{1,40})$/.exec(before);
+    if (!match || match.index === undefined || !match[1]) {
+      return this;
+    }
+    const raw = `@${match[1]}`;
+    const from = before.length - raw.length;
+    const marks = addMarkIn(node.marks, { type: "mention", value: match[1] });
+    this.applyOp({ type: "remove_text", path: point.path, offset: from, text: raw + inserted });
+    this.setSelection(collapsed({ path: point.path, offset: from }));
+    this.insertMarkedText({ path: point.path, offset: from }, raw, marks);
+    this.applyOp({ type: "insert_text", path: point.path, offset: from + raw.length, text: inserted });
+    return this.normalize();
+  }
+
   private tableLocation(): { table: number; row: number; col: number } | null {
+    if (isCellSelection(this.selection) && this.selection.anchor.length >= 3) {
+      const [table, row, col] = this.selection.anchor;
+      if (table !== undefined && row !== undefined && col !== undefined) {
+        const node = getNode(this.doc, [table]);
+        if (isTable(node)) {
+          return { table, row, col };
+        }
+      }
+    }
     if (isTextSelection(this.selection) && this.selection.anchor.path.length >= 3) {
       const [table, row, col] = this.selection.anchor.path;
       if (table !== undefined && row !== undefined && col !== undefined) {
@@ -1185,27 +1402,23 @@ export function activeMarksAt(doc: OraDocument, point: Point): OraMark[] {
 }
 
 export function textPathsInRange(doc: OraDocument, start: Point, end: Point): Path[] {
-  const paths: Path[] = [];
-  const startBlock = start.path[0] ?? 0;
-  const endBlock = end.path[0] ?? startBlock;
-  for (let b = startBlock; b <= endBlock; b += 1) {
-    const block = getNode(doc, [b]);
-    const children = "content" in block ? (block.content ?? []) : [];
-    children.forEach((child, index) => {
-      if (!isText(child)) {
-        return;
+  return walkTextPaths(doc).filter((path) => {
+    const vsStart = pathCompare(path, start.path);
+    const vsEnd = pathCompare(path, end.path);
+    if (vsStart < 0 || vsEnd > 0) {
+      return false;
+    }
+    if (vsEnd === 0 && end.offset === 0 && vsStart !== 0) {
+      return false;
+    }
+    if (vsStart === 0 && start.offset > 0) {
+      const node = getNode(doc, path);
+      if (isText(node) && start.offset >= node.text.length) {
+        return false;
       }
-      const path = [b, index];
-      if (b === startBlock && index < (start.path[1] ?? 0)) {
-        return;
-      }
-      if (b === endBlock && index > (end.path[1] ?? 0)) {
-        return;
-      }
-      paths.push(path);
-    });
-  }
-  return paths;
+    }
+    return true;
+  });
 }
 
 export function lastTextPath(doc: OraDocument, blockIndex: number): Path | null {

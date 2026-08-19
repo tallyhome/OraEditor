@@ -7,6 +7,8 @@
   --ora-color-border: #e7e5e4;
   --ora-color-accent: #2563eb;
   --ora-color-selection: rgb(37 99 235 / 18%);
+  --ora-color-toolbar: #fafaf9;
+  --ora-color-muted-bg: #f5f5f4;
   --ora-radius: 10px;
   --ora-content-padding: 1.25rem 1.5rem;
   --ora-line-height: 1.65;
@@ -17,6 +19,17 @@
   background: var(--ora-color-bg);
   border: 1px solid var(--ora-color-border);
   border-radius: var(--ora-radius);
+}
+
+.ora-editor--dark {
+  --ora-color-text: #f5f5f4;
+  --ora-color-muted: #a8a29e;
+  --ora-color-bg: #1c1917;
+  --ora-color-border: #44403c;
+  --ora-color-accent: #60a5fa;
+  --ora-color-selection: rgb(96 165 250 / 22%);
+  --ora-color-toolbar: #292524;
+  --ora-color-muted-bg: #292524;
 }
 
 .ora-editor *,
@@ -101,7 +114,7 @@
 .ora-content code {
   font-family: var(--ora-font-mono);
   font-size: 0.9em;
-  background: #f5f5f4;
+  background: var(--ora-color-muted-bg);
   padding: 0.1em 0.35em;
   border-radius: 4px;
 }
@@ -120,7 +133,7 @@
 .ora-content .ora-code-block {
   font-family: var(--ora-font-mono);
   font-size: 0.9rem;
-  background: #f5f5f4;
+  background: var(--ora-color-muted-bg);
   padding: 0.75rem 1rem;
   border-radius: 8px;
   overflow: auto;
@@ -175,18 +188,101 @@
 
 .ora-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.3rem;
   padding: 0.55rem 0.7rem;
   border-bottom: 1px solid var(--ora-color-border);
-  background: #fafaf9;
+  background: var(--ora-color-toolbar);
+}
+
+.ora-toolbar-primary {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.ora-toolbar-overflow {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.ora-toolbar-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.3rem);
+  z-index: 18;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  width: min(22rem, 80vw);
+  padding: 0.5rem;
+  background: var(--ora-color-bg);
+  border: 1px solid var(--ora-color-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgb(28 25 23 / 16%);
+}
+
+.ora-toolbar-menu[hidden] {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .ora-toolbar {
+    flex-wrap: wrap;
+  }
+  .ora-toolbar-more-btn {
+    display: none;
+  }
+  .ora-toolbar-menu {
+    display: contents;
+    position: static;
+    width: auto;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .ora-toolbar-menu[hidden] {
+    display: contents;
+  }
+}
+
+.ora-toolbar input[type="number"] {
+  width: 3.4rem;
+  border: 1px solid transparent;
+  background: var(--ora-color-muted-bg);
+  color: inherit;
+  border-radius: 8px;
+  min-height: 2rem;
+  padding: 0 0.35rem;
+  font: inherit;
+}
+
+.ora-emoji-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1.7rem);
+  gap: 0.15rem;
+  width: 100%;
+  padding-top: 0.35rem;
+}
+
+.ora-emoji-picker[hidden] {
+  display: none;
+}
+
+.ora-emoji-picker button {
+  min-height: 1.7rem;
+  padding: 0;
 }
 
 .ora-toolbar button,
 .ora-toolbar select {
   border: 1px solid transparent;
-  background: #f5f5f4;
+  background: var(--ora-color-muted-bg);
   color: inherit;
   border-radius: 8px;
   min-height: 2rem;
@@ -237,7 +333,8 @@
 }
 
 .ora-dialog {
-  background: #fff;
+  background: var(--ora-color-bg);
+  color: inherit;
   border-radius: 12px;
   padding: 1rem 1.1rem;
   min-width: 18rem;
@@ -300,7 +397,7 @@
   gap: 0.35rem;
   max-width: calc(100% - 1rem);
   padding: 0.4rem 0.5rem;
-  background: #fff;
+  background: var(--ora-color-bg);
   border: 1px solid var(--ora-color-border);
   border-radius: 10px;
   box-shadow: 0 10px 28px rgb(28 25 23 / 14%);
@@ -385,8 +482,15 @@
 }
 
 .ora-table th {
-  background: #f5f5f4;
+  background: var(--ora-color-muted-bg);
   font-weight: 650;
+}
+
+.ora-table td.is-selected,
+.ora-table th.is-selected {
+  outline: 2px solid var(--ora-color-accent);
+  outline-offset: -2px;
+  background: var(--ora-color-selection);
 }
 
 .ora-row-handle {
@@ -414,7 +518,7 @@
   gap: 0.35rem;
   padding: 0.4rem 0.7rem;
   border-bottom: 1px solid var(--ora-color-border);
-  background: #fff;
+  background: var(--ora-color-bg);
 }
 
 .ora-findbar[hidden] {
@@ -432,12 +536,13 @@
 
 .ora-findbar button {
   border: 1px solid transparent;
-  background: #f5f5f4;
+  background: var(--ora-color-muted-bg);
   border-radius: 7px;
   min-height: 1.8rem;
   padding: 0 0.45rem;
   cursor: pointer;
   font: inherit;
+  color: inherit;
 }
 
 .ora-findbar-count {
@@ -459,7 +564,7 @@
   border-top: 1px solid var(--ora-color-border);
   font-size: 0.75rem;
   color: var(--ora-color-muted);
-  background: #fafaf9;
+  background: var(--ora-color-toolbar);
 }
 
 .ora-toolbar select {
@@ -469,7 +574,7 @@
 .ora-ai-panel {
   border-top: 1px solid var(--ora-color-border);
   padding: 0.6rem 0.8rem 0.8rem;
-  background: #fafaf9;
+  background: var(--ora-color-toolbar);
 }
 
 .ora-ai-head {
@@ -505,4 +610,75 @@
   margin: 0.45rem 0 0;
   font-size: 0.78rem;
   color: var(--ora-color-muted);
+}
+
+.ora-content hr,
+.ora-horizontalRule hr {
+  border: 0;
+  border-top: 1px solid var(--ora-color-border);
+  margin: 1rem 0;
+}
+
+.ora-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--ora-color-border);
+  border-radius: 8px;
+  background: var(--ora-color-muted-bg);
+  text-decoration: none;
+  color: inherit;
+}
+
+.ora-toc {
+  padding: 0.7rem 1rem;
+  margin: 0 0 0.75rem;
+  border: 1px solid var(--ora-color-border);
+  border-radius: 8px;
+  background: var(--ora-color-toolbar);
+}
+
+.ora-toc ol {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.ora-mention {
+  color: var(--ora-color-accent);
+  font-weight: 650;
+  background: var(--ora-color-selection);
+  border-radius: 4px;
+  padding: 0 0.15em;
+}
+
+.ora-mention-menu {
+  position: absolute;
+  z-index: 19;
+  left: 1rem;
+  bottom: 2.5rem;
+  min-width: 10rem;
+  max-height: 12rem;
+  overflow: auto;
+  padding: 0.3rem;
+  background: var(--ora-color-bg);
+  border: 1px solid var(--ora-color-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgb(28 25 23 / 16%);
+  display: grid;
+}
+
+.ora-mention-menu button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.3rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ora-mention-menu button:hover {
+  background: var(--ora-color-muted-bg);
 }

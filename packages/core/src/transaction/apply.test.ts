@@ -84,4 +84,19 @@ describe("Transform commandes", () => {
     expect(tr.doc.content).toHaveLength(1);
     expect(text).toMatchObject({ type: "text", text: "A" });
   });
+
+  it("applique police et taille seulement sur la sélection", () => {
+    const tr = new Transform(emptyState());
+    tr.insertText("Hello world");
+    tr.setSelection({
+      type: "text",
+      anchor: { path: [0, 0], offset: 0 },
+      focus: { path: [0, 0], offset: 5 },
+    });
+    tr.applyMark({ type: "fontSize", value: "20px" });
+    const content = tr.doc.content[0] && "content" in tr.doc.content[0] ? tr.doc.content[0].content ?? [] : [];
+    expect(content[0]).toMatchObject({ type: "text", text: "Hello", marks: [{ type: "fontSize", value: "20px" }] });
+    expect(content[1]).toMatchObject({ type: "text", text: " world" });
+    expect(content[1] && "marks" in content[1] ? content[1].marks : undefined).toBeUndefined();
+  });
 });

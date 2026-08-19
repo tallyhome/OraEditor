@@ -23,7 +23,7 @@ for (const name of files) {
 }
 const manifest = {
   name: "ora-editor",
-  version: "0.1.2",
+  version: "0.1.3",
   channel: "stable",
   compatibleCore: "^0.1.0",
   files,

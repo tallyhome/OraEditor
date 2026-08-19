@@ -51,8 +51,12 @@ function sanitizeNode(input: unknown, schema: Schema): OraNode | null {
   if (raw.attrs && typeof raw.attrs === "object") {
     node.attrs = sanitizeAttrs(type, raw.attrs as Record<string, unknown>);
   }
-  if (content.length === 0 && isElement(node) && type !== "image" && type !== "video" && type !== "audio" && type !== "embed") {
+  const atomic = type === "image" || type === "video" || type === "audio" || type === "embed" || type === "horizontalRule" || type === "file" || type === "toc";
+  if (content.length === 0 && isElement(node) && !atomic) {
     node.content = [{ type: "text", text: "" }];
+  }
+  if (atomic) {
+    delete node.content;
   }
   return node;
 }
@@ -77,7 +81,10 @@ function sanitizeAttrs(type: string, attrs: Record<string, unknown>): Record<str
   if (typeof attrs.lineHeight === "string" && /^\d+(?:\.\d+)?$/.test(attrs.lineHeight)) {
     next.lineHeight = attrs.lineHeight;
   }
-  if (type === "image" || type === "video" || type === "audio" || type === "embed") {
+  if (typeof attrs.id === "string" && /^[A-Za-z][\w:-]{0,63}$/.test(attrs.id)) {
+    next.id = attrs.id;
+  }
+  if (type === "image" || type === "video" || type === "audio" || type === "embed" || type === "file") {
     if (typeof attrs.src === "string") {
       next.src = attrs.src;
     }
@@ -86,6 +93,9 @@ function sanitizeAttrs(type: string, attrs: Record<string, unknown>): Record<str
     }
     if (typeof attrs.title === "string") {
       next.title = attrs.title;
+    }
+    if (typeof attrs.filename === "string") {
+      next.filename = attrs.filename.slice(0, 180);
     }
     if (typeof attrs.caption === "string") {
       next.caption = attrs.caption;
@@ -147,6 +157,7 @@ function sanitizeMark(input: unknown): OraMark | null {
     case "background":
     case "fontSize":
     case "fontFamily":
+    case "mention":
       return typeof raw.value === "string" ? { type: raw.type, value: raw.value } : null;
     case "link":
       return typeof raw.href === "string"

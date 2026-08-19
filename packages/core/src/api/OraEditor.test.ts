@@ -218,11 +218,11 @@ describe("API OraEditor", () => {
     const editor = new OraEditor({ element: host });
     editor.exec("insertText", { text: "Texte" });
     editor.exec("selectAll");
-    editor.exec("setMark", { mark: { type: "fontSize", value: "24px" } });
+    editor.exec("setMark", { mark: { type: "fontSize", value: "20px" } });
     editor.exec("setMark", { mark: { type: "fontFamily", value: "Georgia, serif" } });
     editor.exec("toggleMark", { mark: { type: "superscript" } });
     const html = editor.getHTML();
-    expect(html).toContain("font-size: 24px");
+    expect(html).toContain("font-size: 20px");
     expect(html).toContain("font-family: Georgia, serif");
     expect(html).toContain("<sup>");
     editor.destroy();
@@ -282,6 +282,53 @@ describe("API OraEditor", () => {
     const content = host.querySelector(".ora-content");
     expect(content?.classList.contains("ora-is-empty")).toBe(true);
     expect(content?.getAttribute("data-placeholder")).toBe("Votre texte");
+    editor.destroy();
+  });
+
+  it("insère une ligne, un sommaire et une ancre", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host });
+    editor.setHTML("<h2>Intro</h2><p></p>");
+    editor.exec("setAnchor", { id: "intro" });
+    expect(editor.getHTML()).toContain('id="intro"');
+    editor.exec("insertHorizontalRule");
+    expect(editor.getHTML()).toContain("<hr>");
+    editor.exec("insertToc");
+    expect(editor.getHTML()).toContain("ora-toc");
+    editor.destroy();
+  });
+
+  it("convertit --- et *italique*", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host });
+    for (const char of "---") {
+      editor.exec("insertText", { text: char });
+    }
+    expect(editor.getHTML()).toContain("<hr>");
+    for (const char of "*ok*") {
+      editor.exec("insertText", { text: char });
+    }
+    expect(editor.getHTML()).toContain("<em>ok</em>");
+    editor.destroy();
+  });
+
+  it("fusionne un rectangle de cellules et applique une taille libre", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host, preset: "full" });
+    editor.setHTML("<table><tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr></table>");
+    editor.dispatch((tr) => tr.setSelection({ type: "cell", anchor: [0, 0, 0], focus: [0, 1, 1] }), { history: false });
+    editor.exec("tableMergeSelection");
+    expect(editor.getHTML()).toContain("colspan=\"2\"");
+    expect(editor.getHTML()).toContain("rowspan=\"2\"");
+    editor.destroy();
+  });
+
+  it("bascule le mode sombre", () => {
+    const host = mount();
+    const editor = new OraEditor({ element: host, theme: "light" });
+    expect(host.classList.contains("ora-editor--dark")).toBe(false);
+    editor.toggleTheme();
+    expect(host.classList.contains("ora-editor--dark")).toBe(true);
     editor.destroy();
   });
 });
